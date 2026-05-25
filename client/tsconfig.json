@@ -1,0 +1,18 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "outDir": "dist",
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    "paths": {
+      "@salary/shared": ["../shared/src/index.ts"]
+    }
+  },
+  // vite.config.ts is deliberately excluded from typechecking. Two
+  // copies of vite end up in the workspace (vitest vendors its own),
+  // creating a type-identity clash in Vite's plugin/proxy types that
+  // surfaces only at config-load time. Vite executes the file through
+  // its own loader regardless; tsc has no business there.
+  "include": ["src/**/*", "test/**/*", "../shared/src/**/*"]
+}
