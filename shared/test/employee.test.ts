@@ -4,6 +4,7 @@ import { EmployeeSchema } from '../src/employee';
 // A record that satisfies every required field on EmployeeSchema.
 // As the schema grows, only this constant needs updating.
 const validEmployee = {
+  id: '550e8400-e29b-41d4-a716-446655440000',
   fullName: 'Jane Doe',
   jobTitle: 'Software Engineer',
   country: 'IN',
@@ -265,6 +266,32 @@ describe('EmployeeSchema', () => {
 
     it('rejects garbage', () => {
       const result = EmployeeSchema.safeParse({ ...validEmployee, joinedAt: 'yesterday' });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('id', () => {
+    it('accepts a v4 UUID', () => {
+      const result = EmployeeSchema.safeParse({
+        ...validEmployee,
+        id: '550e8400-e29b-41d4-a716-446655440000',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects a non-UUID string', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, id: 'not-a-uuid' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a numeric id', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, id: 123 });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a missing id', () => {
+      const { id: _omit, ...rest } = validEmployee;
+      const result = EmployeeSchema.safeParse(rest);
       expect(result.success).toBe(false);
     });
   });

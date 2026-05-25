@@ -37,6 +37,7 @@ const joinedAt = z.string().refine(
 );
 
 export const EmployeeSchema = z.object({
+  id: z.string().uuid(),
   fullName: requiredText(),
   jobTitle: requiredText(),
   country: countryCode,
