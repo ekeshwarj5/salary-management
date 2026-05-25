@@ -56,3 +56,15 @@ export type Employee = z.infer<typeof EmployeeSchema>;
 export const CreateEmployeeSchema = EmployeeSchema.omit({ id: true }).strict();
 
 export type CreateEmployee = z.infer<typeof CreateEmployeeSchema>;
+
+// Payload for updating an employee. Every editable field is optional, but
+// an empty payload is rejected - a no-op update is almost certainly a
+// caller bug. id is not updatable.
+export const UpdateEmployeeSchema = EmployeeSchema.omit({ id: true })
+  .partial()
+  .strict()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'update payload must contain at least one field',
+  });
+
+export type UpdateEmployee = z.infer<typeof UpdateEmployeeSchema>;
