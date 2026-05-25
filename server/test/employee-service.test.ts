@@ -240,3 +240,81 @@ describe('EmployeeService.list', () => {
     expect(result.pageSize).toBeLessThanOrEqual(200);
   });
 });
+
+describe('EmployeeService.list filtering', () => {
+  let service: EmployeeService;
+
+  beforeEach(() => {
+    service = new EmployeeService(new InMemoryEmployeeRepository(), sequentialIds());
+  });
+
+  const make = (overrides: Partial<CreateEmployee>) =>
+    service.create({ ...validInput, ...overrides });
+
+  it('filters by exact country code', async () => {
+    await make({ fullName: 'A', country: 'IN' });
+    await make({ fullName: 'B', country: 'US' });
+    await make({ fullName: 'C', country: 'IN' });
+
+    const result = await service.list({ country: 'IN' });
+
+    expect(result.total).toBe(2);
+    expect(result.items.map((e) => e.fullName)).toEqual(['A', 'C']);
+  });
+
+  it('filters by exact jobTitle', async () => {
+    await make({ fullName: 'A', jobTitle: 'Engineer' });
+    await make({ fullName: 'B', jobTitle: 'Designer' });
+    await make({ fullName: 'C', jobTitle: 'Engineer' });
+
+    const result = await service.list({ jobTitle: 'Engineer' });
+
+    expect(result.total).toBe(2);
+    expect(result.items.map((e) => e.fullName)).toEqual(['A', 'C']);
+  });
+
+  it('search matches a case-insensitive substring of fullName', async () => {
+    await make({ fullName: 'Jane Doe' });
+    await make({ fullName: 'John Smith' });
+    await make({ fullName: 'Janet Roe' });
+
+    const result = await service.list({ search: 'jan' });
+
+    expect(result.items.map((e) => e.fullName).sort()).toEqual(['Jane Doe', 'Janet Roe']);
+  });
+
+  it('combines filters with AND semantics', async () => {
+    await make({ fullName: 'A', country: 'IN', jobTitle: 'Engineer' });
+    await make({ fullName: 'B', country: 'IN', jobTitle: 'Designer' });
+    await make({ fullName: 'C', country: 'US', jobTitle: 'Engineer' });
+
+    const result = await service.list({ country: 'IN', jobTitle: 'Engineer' });
+
+    expect(result.total).toBe(1);
+    expect(result.items[0]?.fullName).toBe('A');
+  });
+
+  it('paginates over the filtered set, not the full table', async () => {
+    for (let i = 0; i < 15; i += 1) {
+      await make({ fullName: `IN ${String(i + 1).padStart(2, '0')}`, country: 'IN' });
+    }
+    for (let i = 0; i < 5; i += 1) {
+      await make({ fullName: `US ${String(i + 1).padStart(2, '0')}`, country: 'US' });
+    }
+
+    const page2 = await service.list({ country: 'IN', page: 2, pageSize: 10 });
+
+    expect(page2.total).toBe(15);
+    expect(page2.items).toHaveLength(5);
+    expect(page2.items[0]?.fullName).toBe('IN 11');
+  });
+
+  it('returns an empty page when no employee matches', async () => {
+    await make({ fullName: 'A', country: 'IN' });
+
+    const result = await service.list({ country: 'DE' });
+
+    expect(result.items).toEqual([]);
+    expect(result.total).toBe(0);
+  });
+});

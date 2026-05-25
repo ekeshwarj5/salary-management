@@ -30,13 +30,20 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
   }
 
   async list(query: ListQuery): Promise<ListResult> {
-    const ordered = [...this.employees.values()].sort((a, b) => {
+    const search = query.search?.toLowerCase();
+    const filtered = [...this.employees.values()].filter((e) => {
+      if (query.country && e.country !== query.country) return false;
+      if (query.jobTitle && e.jobTitle !== query.jobTitle) return false;
+      if (search && !e.fullName.toLowerCase().includes(search)) return false;
+      return true;
+    });
+    filtered.sort((a, b) => {
       const byName = a.fullName.localeCompare(b.fullName);
       return byName !== 0 ? byName : a.id.localeCompare(b.id);
     });
-    const total = ordered.length;
+    const total = filtered.length;
     const offset = (query.page - 1) * query.pageSize;
-    const items = ordered.slice(offset, offset + query.pageSize);
+    const items = filtered.slice(offset, offset + query.pageSize);
     return { items, total, page: query.page, pageSize: query.pageSize };
   }
 }

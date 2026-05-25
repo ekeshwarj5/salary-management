@@ -1,11 +1,22 @@
 import type { CreateEmployee, Employee, UpdateEmployee } from '@salary/shared';
 
 /**
+ * Filters applied before pagination. country and jobTitle match exactly
+ * (UI typically drives these through dropdowns of distinct values);
+ * search is a case-insensitive substring match on fullName.
+ */
+export interface ListFilters {
+  country?: string;
+  jobTitle?: string;
+  search?: string;
+}
+
+/**
  * Normalised query passed to the repository. The service is responsible
  * for applying defaults / bounds; the repository simply returns the slice
  * described by these fields.
  */
-export interface ListQuery {
+export interface ListQuery extends ListFilters {
   page: number;
   pageSize: number;
 }
@@ -31,7 +42,7 @@ export interface EmployeeRepository {
   list(query: ListQuery): Promise<ListResult>;
 }
 
-export interface ListOptions {
+export interface ListOptions extends ListFilters {
   page?: number;
   pageSize?: number;
 }
@@ -71,6 +82,10 @@ export class EmployeeService {
     const page = Math.max(1, Math.floor(options.page ?? 1));
     const requested = Math.floor(options.pageSize ?? DEFAULT_PAGE_SIZE);
     const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, requested));
-    return this.repo.list({ page, pageSize });
+    const query: ListQuery = { page, pageSize };
+    if (options.country) query.country = options.country;
+    if (options.jobTitle) query.jobTitle = options.jobTitle;
+    if (options.search) query.search = options.search;
+    return this.repo.list(query);
   }
 }
