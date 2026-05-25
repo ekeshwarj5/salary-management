@@ -51,6 +51,18 @@ The intent is not to log every keystroke, but to capture the *non-obvious* promp
 
 **Validation discipline**: Ran `npm run typecheck` and `npm test` after each commit; the typecheck step caught two pre-existing `rootDir` issues that Vitest's transformer had been silently absorbing, which were fixed alongside the foundation commit. Final suite at 55 green across two repositories and the service.
 
+## Phase 5 — Fastify CRUD routes
+
+**Prompt**: _Wire EmployeeService to HTTP via Fastify. One commit per endpoint (POST, GET single, PATCH, DELETE, GET list). Test via fastify.inject() — no real network. Use the shared CreateEmployeeSchema / UpdateEmployeeSchema for body validation, plus a route-local ListQuerySchema (Zod with z.coerce.number for stringly-typed query params). Two error envelopes only: ValidationError (with Zod issues) and NotFound. Garbage path ids fold into 404, not 400 — same caller-visible outcome._
+
+**Why**:
+- `fastify.inject()` removes the entire HTTP stack from the test path; each route test runs in ~3ms and is fully deterministic.
+- Sharing schemas between request validation and the existing domain validation means there's exactly one place where "what makes an employee valid" lives — adding a field changes one schema and every layer is in sync.
+- Folding bad path ids into 404 keeps the API's failure surface to two shapes (validation, not-found); the alternative (per-param UUID validation = 400) doubles the failure modes for the same observable outcome.
+- The service applies defaults / bounds (pageSize default 20, ceiling 200) inside `list()`, so the route can pass the parsed query straight through without re-implementing the policy.
+
+**Validation discipline**: Tests after every endpoint. Final suite at 79 green (25 service + 30 contract + 24 routes).
+
 ---
 
 > Subsequent phases will append here as we build.

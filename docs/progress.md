@@ -127,3 +127,33 @@ A short, chronological log of what shipped in each phase, what was validated, wh
 **Commits**: 3 (foundation + contract extraction + SQLite implementation).
 
 ---
+
+## Phase 5 — Fastify CRUD routes
+
+**Goal**: Expose the employee service over HTTP with input validation, predictable error envelopes, and integration tests that run in-process (no port binding).
+
+**Shipped**:
+- `server/src/app.ts` — `buildApp(service)` factory that returns a Fastify instance wired to a given service.
+- `server/src/routes/employees.ts` — five endpoints:
+  - `GET /employees` — paginated, filterable list. Query params (`page`, `pageSize`, `country`, `jobTitle`, `search`) are validated through a Zod `ListQuerySchema` that coerces numerics and enforces the same country format as the domain.
+  - `POST /employees` — 201 + created employee, or 400 ValidationError.
+  - `GET /employees/:id` — 200 + employee or 404. Garbage ids fold into 404 to keep the failure surface small.
+  - `PATCH /employees/:id` — 200 + merged employee, 404 if missing, 400 on validation issues (empty body, id injection, bad value).
+  - `DELETE /employees/:id` — 204 on success, 404 if missing.
+- Unified error envelopes:
+  - `{ error: 'ValidationError', issues: [{ path, message, code }] }`
+  - `{ error: 'NotFound', message: '...' }`
+
+**Validation**: 24 route tests via `fastify.inject()` covering success and failure paths for every endpoint. Total suite at 79 green.
+
+**Deferred**:
+- `server.ts` wiring (open a SQLite connection, listen on a port) — folded into the seed script phase, since both need the same DB initialisation path.
+- Rate limiting, auth, request logging — out of scope for the HR-Manager-as-only-user persona.
+
+**Files**:
+- `server/src/app.ts`, `server/src/routes/employees.ts`
+- `server/test/routes/employees.test.ts`
+
+**Commits**: 5 (POST, GET single, PATCH, DELETE, GET list).
+
+---
