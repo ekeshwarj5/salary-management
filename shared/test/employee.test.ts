@@ -7,6 +7,8 @@ const validEmployee = {
   fullName: 'Jane Doe',
   jobTitle: 'Software Engineer',
   country: 'IN',
+  salary: 1_500_000,
+  currency: 'INR',
 };
 
 describe('EmployeeSchema', () => {
@@ -110,6 +112,77 @@ describe('EmployeeSchema', () => {
 
     it('rejects a missing country', () => {
       const { country: _omit, ...rest } = validEmployee;
+      const result = EmployeeSchema.safeParse(rest);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('salary', () => {
+    it('accepts a positive integer', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, salary: 50_000 });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts a positive decimal', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, salary: 50_000.5 });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects zero', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, salary: 0 });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a negative salary', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, salary: -1 });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects NaN', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, salary: Number.NaN });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects Infinity', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, salary: Number.POSITIVE_INFINITY });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a non-numeric salary', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, salary: '50000' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a missing salary', () => {
+      const { salary: _omit, ...rest } = validEmployee;
+      const result = EmployeeSchema.safeParse(rest);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('currency', () => {
+    it('accepts a valid ISO-4217 code', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, currency: 'USD' });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects a lowercase currency code', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, currency: 'usd' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a two-letter currency code', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, currency: 'US' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a four-letter currency code', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, currency: 'USDX' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a missing currency', () => {
+      const { currency: _omit, ...rest } = validEmployee;
       const result = EmployeeSchema.safeParse(rest);
       expect(result.success).toBe(false);
     });
