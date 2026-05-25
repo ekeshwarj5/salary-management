@@ -43,13 +43,32 @@ npm test --workspace=client    # only client
 npm test --workspace=shared    # only shared
 ```
 
-## Seed
-
-A seed script populates the database with 10,000 employees by combining names from `data/first_names.txt` and `data/last_names.txt`. See `docs/performance.md` for benchmark numbers.
+## Run the API
 
 ```bash
-npm run seed --workspace=server
+cd server
+npm run dev        # tsx watch + Fastify on http://localhost:3000
 ```
+
+Environment variables (all optional):
+- `DATABASE_PATH` — SQLite file path (default `./data.db`)
+- `PORT` — listen port (default `3000`)
+- `HOST` — bind address (default `0.0.0.0`)
+
+CORS reflects any origin, so a frontend on `localhost:5173` (Vite default) can call the API directly.
+
+## Seed
+
+A seed script populates the database with 10,000 employees by combining names from `data/first_names.txt` and `data/last_names.txt`. See [`docs/performance.md`](docs/performance.md) for benchmark numbers (current run: ~52 ms for 10K rows).
+
+```bash
+cd server
+npm run seed                              # 10K rows, ./data.db, random
+npm run seed -- --count=5000 --seed=42    # reproducible, smaller
+npm run seed -- --db=../data.db           # write outside server/
+```
+
+The script truncates `employees` before inserting, so re-runs are idempotent.
 
 ## Documentation
 

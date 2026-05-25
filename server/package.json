@@ -12,6 +12,7 @@
     "seed": "tsx src/seed.ts"
   },
   "dependencies": {
+    "@fastify/cors": "^11.2.0",
     "@salary/shared": "*",
     "better-sqlite3": "^12.10.0",
     "drizzle-orm": "^0.45.2",
