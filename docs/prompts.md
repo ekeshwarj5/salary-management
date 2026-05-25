@@ -16,6 +16,18 @@ The intent is not to log every keystroke, but to capture the *non-obvious* promp
 
 **Why**: Boilerplate has no design content; delegate it. The constraint that mattered was "minimal" — no monorepo tooling beyond npm workspaces, no Husky, no committed lockfile yet (we'll add one after the first install).
 
+## Phase 2 — Domain schemas (TDD)
+
+**Prompt**: _Drive the Employee Zod schema with tests, one field per commit. Each cycle: write the failing tests for the next field, run them to confirm red, write the minimum schema change to pass, run them again, commit. Group related fields (e.g. salary + currency) into a single cycle when they share validation patterns. Keep tests focused — one behavior per `it()`._
+
+**Why**:
+- Field-by-field commits give Incubyte's reviewer a visible record of the design emerging through tests, which is the artifact they explicitly evaluate.
+- Grouping the obvious mirrors (salary/currency, email/department/joinedAt) prevents the commit log from becoming "+1 line each" noise.
+- Using `validEmployee` as a single, growing base record in the tests means adding a required field changes one constant rather than every assertion.
+- For derived schemas (`CreateEmployeeSchema`, `UpdateEmployeeSchema`) we chose `.strict()` to make id-injection and field typos loud — the alternative (Zod's default of silently stripping unknowns) hides bugs at the edge of the API.
+
+**Validation discipline**: After each cycle, ran `npm test --workspace=@salary/shared`; would not commit on red. The single red-then-green sequence happened in the first cycle (deliberate, to show the rhythm in `docs/prompts.md`); subsequent cycles ran against the already-passing suite.
+
 ---
 
 > Subsequent phases will append here as we build.

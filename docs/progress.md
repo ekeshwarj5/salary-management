@@ -37,3 +37,34 @@ A short, chronological log of what shipped in each phase, what was validated, wh
 2. `chore: add shared + server workspaces with Vitest, Prettier, EditorConfig`
 
 ---
+
+## Phase 2 — Domain schemas (shared/)
+
+**Goal**: Establish the canonical Employee record and the input shapes for create / update operations. Drive the design with tests so each schema feature is justified by a failing test before it appears.
+
+**Shipped**:
+- `EmployeeSchema` — full record with `id, fullName, jobTitle, country, salary, currency, email, department, joinedAt`. Each field has rules that match HR-data realities:
+  - `fullName`, `jobTitle`, `department` — trimmed, non-empty, capped at 100 chars (DB-friendly bounds) via a shared `requiredText` helper.
+  - `country` — ISO-3166-1 alpha-2, two uppercase letters. Stored as a code, not free text, so analytics aggregations are stable.
+  - `currency` — ISO-4217, three uppercase letters. Pairs every salary with an explicit unit.
+  - `salary` — positive, finite number. Decimals permitted; the storage layer decides precision.
+  - `email` — standard email format.
+  - `joinedAt` — strict `YYYY-MM-DD` with calendar-overflow checking (rejects `2020-02-31`, wrong separators, full ISO datetimes).
+  - `id` — UUID; required on the record, assigned by the server.
+- `CreateEmployeeSchema` — derived as `EmployeeSchema.omit({ id }).strict()`. Rejects `id` injection and typo'd field names.
+- `UpdateEmployeeSchema` — derived as `omit({ id }).partial().strict().refine(non-empty)`. Empty payloads are rejected as likely bugs; field-level validation still applies to any field that *is* supplied.
+- All three schemas export their inferred TypeScript types.
+
+**Validation**: 61 tests passing across `employee.test.ts`, `create-employee.test.ts`, `update-employee.test.ts`. Coverage spans the happy path, every required-field omission, every format violation, type-level assertions on `CreateEmployee` and `UpdateEmployee`.
+
+**Deferred**:
+- Country / currency code reference data — for now we accept any well-formatted code. A future enum-or-whitelist refinement would prevent fabricated codes like `ZZ`, but the seed and UI control the input domain, so it adds value only when manual API access is allowed.
+- Audit timestamps (`createdAt`, `updatedAt`) — those belong to the storage layer, not the domain contract.
+
+**Files**:
+- `shared/src/employee.ts`, `shared/src/index.ts`
+- `shared/test/employee.test.ts`, `shared/test/create-employee.test.ts`, `shared/test/update-employee.test.ts`
+
+**Commits**: 7 TDD steps (zod install, fullName, jobTitle, country, salary+currency, email+department+joinedAt, id, CreateEmployeeSchema, UpdateEmployeeSchema).
+
+---
