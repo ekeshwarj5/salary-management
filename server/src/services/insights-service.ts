@@ -1,34 +1,12 @@
-import type { Employee } from '@salary/shared';
+import type {
+  CountrySalaryInsight,
+  Employee,
+  OverviewInsight,
+  TitleSalaryInsight,
+} from '@salary/shared';
 import type { EmployeeRepository } from './employee-service';
 
-export interface CountrySalaryInsight {
-  country: string;
-  currency: string;
-  count: number;
-  minSalary: number;
-  maxSalary: number;
-  avgSalary: number;
-  medianSalary: number;
-}
-
-export interface TitleSalaryInsight {
-  country: string;
-  jobTitle: string;
-  currency: string;
-  count: number;
-  minSalary: number;
-  maxSalary: number;
-  avgSalary: number;
-  medianSalary: number;
-}
-
-export interface OverviewInsight {
-  totalCount: number;
-  countriesRepresented: number;
-  jobTitlesRepresented: number;
-  topCountriesByHeadcount: Array<{ country: string; count: number }>;
-  topJobTitlesByHeadcount: Array<{ jobTitle: string; count: number }>;
-}
+export type { CountrySalaryInsight, TitleSalaryInsight, OverviewInsight };
 
 const sum = (xs: number[]): number => xs.reduce((a, b) => a + b, 0);
 const avg = (xs: number[]): number => (xs.length === 0 ? 0 : sum(xs) / xs.length);
