@@ -46,4 +46,12 @@ export const employeeRoutes = (service: EmployeeService) => async (app: FastifyI
     }
     return updated;
   });
+
+  app.delete<{ Params: { id: string } }>('/employees/:id', async (request, reply) => {
+    const removed = await service.delete(request.params.id);
+    if (!removed) {
+      return notFound(reply, request.params.id);
+    }
+    return reply.code(204).send();
+  });
 };

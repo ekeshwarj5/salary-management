@@ -233,3 +233,47 @@ describe('PATCH /employees/:id', () => {
     expect(response.statusCode).toBe(400);
   });
 });
+
+describe('DELETE /employees/:id', () => {
+  let app: FastifyInstance;
+
+  const createOne = async () =>
+    (await app.inject({ method: 'POST', url: '/employees', payload: validPayload })).json();
+
+  beforeEach(async () => {
+    const service = new EmployeeService(new InMemoryEmployeeRepository(), sequentialIds());
+    app = buildApp(service);
+    await app.ready();
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('returns 204 with an empty body when the employee existed', async () => {
+    const created = await createOne();
+
+    const response = await app.inject({ method: 'DELETE', url: `/employees/${created.id}` });
+
+    expect(response.statusCode).toBe(204);
+    expect(response.body).toBe('');
+  });
+
+  it('makes the employee unreadable afterwards', async () => {
+    const created = await createOne();
+
+    await app.inject({ method: 'DELETE', url: `/employees/${created.id}` });
+    const get = await app.inject({ method: 'GET', url: `/employees/${created.id}` });
+
+    expect(get.statusCode).toBe(404);
+  });
+
+  it('returns 404 when the employee does not exist', async () => {
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/employees/00000000-0000-4000-8000-999999999999',
+    });
+
+    expect(response.statusCode).toBe(404);
+  });
+});
