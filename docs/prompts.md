@@ -40,6 +40,17 @@ The intent is not to log every keystroke, but to capture the *non-obvious* promp
 
 **Validation discipline**: Each cycle ran `npm test --workspace=@salary/server` before committing. Final suite at 25 green.
 
+## Phase 4 — SQLite repository
+
+**Prompt**: _Install better-sqlite3 + drizzle-orm. Define an employees table in Drizzle with indexes on country, job_title, and (country, job_title) — those are the analytics paths. Programmatic schema creation (CREATE IF NOT EXISTS), no drizzle-kit, no migration files for a single-host SQLite tool. Then extract a `runEmployeeRepositoryContract(label, factory)` helper that both InMemory and SQLite implementations run against — same 15 assertions, two repos. Use the `.contract.ts` extension so vitest's collector ignores the helper file directly._
+
+**Why**:
+- Programmatic schema creation removes drizzle-kit from the dependency surface for now; for a one-table single-host app, migration files would be ceremony, not safety. The `schema.ts` Drizzle definition is still the single source of truth — if we ever want versioned migrations, `drizzle-kit generate` can take that exact file later.
+- Synchronous `better-sqlite3` wrapped in `async` keeps the repository interface uniform while costing nothing — there's no real I/O wait to amortise.
+- The contract pattern is the move that makes the SQLite swap-in trustworthy: behavioural parity is a *test*, not a promise. If a future Postgres adapter is added, it's a one-line test file.
+
+**Validation discipline**: Ran `npm run typecheck` and `npm test` after each commit; the typecheck step caught two pre-existing `rootDir` issues that Vitest's transformer had been silently absorbing, which were fixed alongside the foundation commit. Final suite at 55 green across two repositories and the service.
+
 ---
 
 > Subsequent phases will append here as we build.

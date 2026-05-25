@@ -97,3 +97,33 @@ A short, chronological log of what shipped in each phase, what was validated, wh
 **Commits**: 5 TDD steps (create+findById, update, delete, list+pagination, list filtering).
 
 ---
+
+## Phase 4 — SQLite repository (Drizzle + better-sqlite3)
+
+**Goal**: Implement the persistence layer so the same service can run against a real database. Prove behavioural parity with the in-memory repository by running both against a single shared contract.
+
+**Shipped**:
+- `server/src/db/schema.ts` — Drizzle table definition for `employees` with three analytics-friendly indexes: `country`, `job_title`, `(country, job_title)`.
+- `server/src/db/client.ts` — `createDb(path)` returns a Drizzle-wrapped `better-sqlite3` connection. WAL on file-backed databases, foreign keys ON, idempotent `CREATE TABLE / CREATE INDEX IF NOT EXISTS`.
+- `server/src/repositories/sqlite-employee-repository.ts` — full implementation using Drizzle queries. `update()` uses SQLite's RETURNING (3.35+) to merge-and-fetch in one round-trip. `list()` composes filters with `and(...)`; search uses `lower(full_name) LIKE lower(?)` for explicit case-insensitive substring matching.
+- `server/test/employee-repository.contract.ts` — a `runEmployeeRepositoryContract(label, factory)` helper that exposes 15 boundary tests covering insert/findById/update/delete/list. Both the in-memory and SQLite repos satisfy this identical suite; the file uses the `.contract.ts` extension so the test collector ignores it directly.
+
+**Validation**:
+- 55 tests green: 25 service + 15 in-memory-contract + 15 sqlite-contract.
+- `npm run typecheck` clean across both workspaces (also fixed pre-existing `rootDir` issues that hadn't surfaced under Vitest's looser TS handling).
+
+**Deferred**:
+- Drizzle migrations (`drizzle-kit`) — uninstalled; we generate the schema programmatically, which is enough for a single-host SQLite tool. If we ever need versioned migrations, `drizzle-kit generate` can pick up `schema.ts` later without code changes.
+- Bulk insert API (`insertMany`) — the seed script will need it, but it's outside the repository contract; the service does not bulk-insert.
+
+**Files**:
+- `server/src/db/schema.ts`, `server/src/db/client.ts`
+- `server/src/repositories/sqlite-employee-repository.ts`
+- `server/test/employee-repository.contract.ts`
+- `server/test/in-memory-employee-repository.test.ts`, `server/test/sqlite-employee-repository.test.ts`
+- `server/src/repositories/in-memory-employee-repository.ts` (typing fix on `update`)
+- `server/tsconfig.json`, `shared/tsconfig.json` (drop `rootDir` to allow cross-workspace imports under strict TS)
+
+**Commits**: 3 (foundation + contract extraction + SQLite implementation).
+
+---
