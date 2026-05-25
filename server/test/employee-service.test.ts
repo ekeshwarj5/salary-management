@@ -114,3 +114,41 @@ describe('EmployeeService.update', () => {
     expect(refetched?.country).toBe('US');
   });
 });
+
+describe('EmployeeService.delete', () => {
+  let service: EmployeeService;
+
+  beforeEach(() => {
+    service = new EmployeeService(new InMemoryEmployeeRepository(), sequentialIds());
+  });
+
+  it('returns true when the employee existed and was removed', async () => {
+    const created = await service.create(validInput);
+
+    const deleted = await service.delete(created.id);
+
+    expect(deleted).toBe(true);
+  });
+
+  it('returns false when the employee does not exist', async () => {
+    const deleted = await service.delete('00000000-0000-4000-8000-999999999999');
+    expect(deleted).toBe(false);
+  });
+
+  it('makes the employee unreadable after deletion', async () => {
+    const created = await service.create(validInput);
+
+    await service.delete(created.id);
+
+    expect(await service.findById(created.id)).toBeNull();
+  });
+
+  it('is idempotent on a second call', async () => {
+    const created = await service.create(validInput);
+    await service.delete(created.id);
+
+    const second = await service.delete(created.id);
+
+    expect(second).toBe(false);
+  });
+});

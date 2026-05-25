@@ -10,6 +10,7 @@ export interface EmployeeRepository {
   insert(employee: Employee): Promise<void>;
   findById(id: string): Promise<Employee | null>;
   update(id: string, patch: UpdateEmployee): Promise<Employee | null>;
+  delete(id: string): Promise<boolean>;
 }
 
 export type IdGenerator = () => string;
@@ -34,5 +35,9 @@ export class EmployeeService {
 
   async update(id: string, patch: UpdateEmployee): Promise<Employee | null> {
     return this.repo.update(id, patch);
+  }
+
+  async delete(id: string): Promise<boolean> {
+    return this.repo.delete(id);
   }
 }

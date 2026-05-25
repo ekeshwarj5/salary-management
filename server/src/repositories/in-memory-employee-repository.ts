@@ -24,4 +24,8 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
     this.employees.set(id, updated);
     return updated;
   }
+
+  async delete(id: string): Promise<boolean> {
+    return this.employees.delete(id);
+  }
 }
