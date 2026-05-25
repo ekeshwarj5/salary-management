@@ -9,6 +9,9 @@ const validEmployee = {
   country: 'IN',
   salary: 1_500_000,
   currency: 'INR',
+  email: 'jane.doe@example.com',
+  department: 'Engineering',
+  joinedAt: '2022-04-01',
 };
 
 describe('EmployeeSchema', () => {
@@ -184,6 +187,84 @@ describe('EmployeeSchema', () => {
     it('rejects a missing currency', () => {
       const { currency: _omit, ...rest } = validEmployee;
       const result = EmployeeSchema.safeParse(rest);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('email', () => {
+    it('accepts a valid email', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, email: 'a.b+c@example.co.uk' });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects an email without an @', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, email: 'janedoe.example.com' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects an empty email', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, email: '' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a missing email', () => {
+      const { email: _omit, ...rest } = validEmployee;
+      const result = EmployeeSchema.safeParse(rest);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('department', () => {
+    it('accepts a non-empty department', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, department: 'Finance' });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects an empty department', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, department: '' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a department longer than 100 characters', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, department: 'A'.repeat(101) });
+      expect(result.success).toBe(false);
+    });
+
+    it('trims surrounding whitespace from department', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, department: '  Finance  ' });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.department).toBe('Finance');
+      }
+    });
+  });
+
+  describe('joinedAt', () => {
+    it('accepts a YYYY-MM-DD date string', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, joinedAt: '2020-01-15' });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects a date with the wrong separator', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, joinedAt: '2020/01/15' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a calendar-invalid date', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, joinedAt: '2020-13-01' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects an ISO datetime (date-only is required)', () => {
+      const result = EmployeeSchema.safeParse({
+        ...validEmployee,
+        joinedAt: '2020-01-15T10:30:00Z',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects garbage', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, joinedAt: 'yesterday' });
       expect(result.success).toBe(false);
     });
   });

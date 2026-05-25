@@ -19,12 +19,32 @@ const currencyCode = z.string().regex(/^[A-Z]{3}$/, {
 // storage layer is free to apply its own precision rules.
 const salary = z.number().positive().finite();
 
+const email = z.string().email();
+
+// joinedAt is a date, not a datetime. HR records "the day they joined";
+// time-of-day adds no signal and would force every consumer to strip it.
+// Accepts strict YYYY-MM-DD and rejects calendar-invalid days (e.g. month 13).
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const joinedAt = z.string().refine(
+  (value) => {
+    if (!ISO_DATE_RE.test(value)) return false;
+    const date = new Date(`${value}T00:00:00Z`);
+    if (Number.isNaN(date.getTime())) return false;
+    // Reject calendar overflow: Date() silently rolls "2020-02-31" to March.
+    return value === date.toISOString().slice(0, 10);
+  },
+  { message: 'joinedAt must be a valid YYYY-MM-DD date' },
+);
+
 export const EmployeeSchema = z.object({
   fullName: requiredText(),
   jobTitle: requiredText(),
   country: countryCode,
   salary,
   currency: currencyCode,
+  email,
+  department: requiredText(),
+  joinedAt,
 });
 
 export type Employee = z.infer<typeof EmployeeSchema>;
