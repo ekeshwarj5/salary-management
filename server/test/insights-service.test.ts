@@ -147,3 +147,77 @@ describe('InsightsService.getByTitleInCountry', () => {
     expect(result.map((r) => r.jobTitle)).toEqual(['Designer', 'Engineer', 'Manager']);
   });
 });
+
+describe('InsightsService.getOverview', () => {
+  it('reports zeros for an empty repo', async () => {
+    const service = await buildService([]);
+
+    expect(await service.getOverview()).toEqual({
+      totalCount: 0,
+      countriesRepresented: 0,
+      jobTitlesRepresented: 0,
+      topCountriesByHeadcount: [],
+      topJobTitlesByHeadcount: [],
+    });
+  });
+
+  it('counts total, distinct countries, and distinct titles', async () => {
+    const service = await buildService([
+      employee({ id: uuid(1), country: 'IN', jobTitle: 'Engineer' }),
+      employee({ id: uuid(2), country: 'IN', jobTitle: 'Engineer' }),
+      employee({ id: uuid(3), country: 'US', jobTitle: 'Designer' }),
+    ]);
+
+    const overview = await service.getOverview();
+
+    expect(overview.totalCount).toBe(3);
+    expect(overview.countriesRepresented).toBe(2);
+    expect(overview.jobTitlesRepresented).toBe(2);
+  });
+
+  it('orders top countries by headcount (desc), then by name', async () => {
+    const service = await buildService([
+      employee({ id: uuid(1), country: 'IN' }),
+      employee({ id: uuid(2), country: 'IN' }),
+      employee({ id: uuid(3), country: 'IN' }),
+      employee({ id: uuid(4), country: 'US' }),
+      employee({ id: uuid(5), country: 'US' }),
+      employee({ id: uuid(6), country: 'DE' }),
+    ]);
+
+    const overview = await service.getOverview();
+
+    expect(overview.topCountriesByHeadcount).toEqual([
+      { country: 'IN', count: 3 },
+      { country: 'US', count: 2 },
+      { country: 'DE', count: 1 },
+    ]);
+  });
+
+  it('caps top countries at 10', async () => {
+    const lots: Employee[] = [];
+    for (let i = 0; i < 15; i += 1) {
+      lots.push(employee({ id: uuid(i), country: `C${String.fromCharCode(65 + i)}` }));
+    }
+    const service = await buildService(lots);
+
+    const overview = await service.getOverview();
+
+    expect(overview.topCountriesByHeadcount).toHaveLength(10);
+  });
+
+  it('orders top job titles by headcount (desc)', async () => {
+    const service = await buildService([
+      employee({ id: uuid(1), jobTitle: 'Engineer' }),
+      employee({ id: uuid(2), jobTitle: 'Engineer' }),
+      employee({ id: uuid(3), jobTitle: 'Designer' }),
+    ]);
+
+    const overview = await service.getOverview();
+
+    expect(overview.topJobTitlesByHeadcount).toEqual([
+      { jobTitle: 'Engineer', count: 2 },
+      { jobTitle: 'Designer', count: 1 },
+    ]);
+  });
+});

@@ -22,6 +22,14 @@ export interface TitleSalaryInsight {
   medianSalary: number;
 }
 
+export interface OverviewInsight {
+  totalCount: number;
+  countriesRepresented: number;
+  jobTitlesRepresented: number;
+  topCountriesByHeadcount: Array<{ country: string; count: number }>;
+  topJobTitlesByHeadcount: Array<{ jobTitle: string; count: number }>;
+}
+
 const sum = (xs: number[]): number => xs.reduce((a, b) => a + b, 0);
 const avg = (xs: number[]): number => (xs.length === 0 ? 0 : sum(xs) / xs.length);
 
@@ -108,5 +116,35 @@ export class InsightsService {
       (a, b) =>
         a.jobTitle.localeCompare(b.jobTitle) || a.currency.localeCompare(b.currency),
     );
+  }
+
+  /**
+   * Headcount summary for an HR dashboard. Avoids any salary aggregation
+   * across currencies; pure counts compose safely across the dataset.
+   */
+  async getOverview(): Promise<OverviewInsight> {
+    const all = await this.repo.findAll();
+    const countries = new Set(all.map((e) => e.country));
+    const titles = new Set(all.map((e) => e.jobTitle));
+
+    const byCountry = groupBy(all, (e) => e.country);
+    const topCountriesByHeadcount = Array.from(byCountry.entries())
+      .map(([country, employees]) => ({ country, count: employees.length }))
+      .sort((a, b) => b.count - a.count || a.country.localeCompare(b.country))
+      .slice(0, 10);
+
+    const byTitle = groupBy(all, (e) => e.jobTitle);
+    const topJobTitlesByHeadcount = Array.from(byTitle.entries())
+      .map(([jobTitle, employees]) => ({ jobTitle, count: employees.length }))
+      .sort((a, b) => b.count - a.count || a.jobTitle.localeCompare(b.jobTitle))
+      .slice(0, 10);
+
+    return {
+      totalCount: all.length,
+      countriesRepresented: countries.size,
+      jobTitlesRepresented: titles.size,
+      topCountriesByHeadcount,
+      topJobTitlesByHeadcount,
+    };
   }
 }
