@@ -277,3 +277,103 @@ describe('DELETE /employees/:id', () => {
     expect(response.statusCode).toBe(404);
   });
 });
+
+describe('GET /employees', () => {
+  let app: FastifyInstance;
+
+  const seed = async (overrides: Partial<CreateEmployee>) =>
+    (
+      await app.inject({
+        method: 'POST',
+        url: '/employees',
+        payload: { ...validPayload, ...overrides },
+      })
+    ).json();
+
+  beforeEach(async () => {
+    const service = new EmployeeService(new InMemoryEmployeeRepository(), sequentialIds());
+    app = buildApp(service);
+    await app.ready();
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('returns an empty page from an empty repo', async () => {
+    const response = await app.inject({ method: 'GET', url: '/employees' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: expect.any(Number),
+    });
+  });
+
+  it('paginates with explicit page and pageSize', async () => {
+    for (let i = 1; i <= 25; i += 1) {
+      await seed({
+        fullName: `Employee ${String(i).padStart(3, '0')}`,
+        email: `e${i}@example.com`,
+      });
+    }
+
+    const response = await app.inject({ method: 'GET', url: '/employees?page=2&pageSize=10' });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.items).toHaveLength(10);
+    expect(body.total).toBe(25);
+    expect(body.page).toBe(2);
+    expect(body.pageSize).toBe(10);
+    expect(body.items[0].fullName).toBe('Employee 011');
+  });
+
+  it('filters by country', async () => {
+    await seed({ fullName: 'A', country: 'IN', email: 'a@x.com' });
+    await seed({ fullName: 'B', country: 'US', email: 'b@x.com' });
+    await seed({ fullName: 'C', country: 'IN', email: 'c@x.com' });
+
+    const response = await app.inject({ method: 'GET', url: '/employees?country=IN' });
+
+    expect(response.json().total).toBe(2);
+  });
+
+  it('filters by jobTitle', async () => {
+    await seed({ fullName: 'A', jobTitle: 'Engineer', email: 'a@x.com' });
+    await seed({ fullName: 'B', jobTitle: 'Designer', email: 'b@x.com' });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/employees?jobTitle=Engineer',
+    });
+
+    expect(response.json().total).toBe(1);
+  });
+
+  it('searches by case-insensitive substring on fullName', async () => {
+    await seed({ fullName: 'Jane Doe', email: 'jane@x.com' });
+    await seed({ fullName: 'John Smith', email: 'john@x.com' });
+
+    const response = await app.inject({ method: 'GET', url: '/employees?search=JANE' });
+
+    const body = response.json();
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].fullName).toBe('Jane Doe');
+  });
+
+  it('returns 400 for a malformed country query', async () => {
+    const response = await app.inject({ method: 'GET', url: '/employees?country=usa' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBe('ValidationError');
+  });
+
+  it('returns 400 for a non-numeric page', async () => {
+    const response = await app.inject({ method: 'GET', url: '/employees?page=abc' });
+
+    expect(response.statusCode).toBe(400);
+  });
+});
