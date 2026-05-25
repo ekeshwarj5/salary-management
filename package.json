@@ -5,8 +5,7 @@
   "description": "Salary management tool for an HR Manager — CRUD over employees and salary insights.",
   "workspaces": [
     "shared",
-    "server",
-    "client"
+    "server"
   ],
   "engines": {
     "node": ">=20"
