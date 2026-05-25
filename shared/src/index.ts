@@ -1,1 +1,6 @@
-export { EmployeeSchema, type Employee } from './employee';
+export {
+  EmployeeSchema,
+  CreateEmployeeSchema,
+  type Employee,
+  type CreateEmployee,
+} from './employee';

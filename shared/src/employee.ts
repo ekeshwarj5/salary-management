@@ -49,3 +49,10 @@ export const EmployeeSchema = z.object({
 });
 
 export type Employee = z.infer<typeof EmployeeSchema>;
+
+// Payload for creating an employee. The id is assigned by the server, so
+// callers cannot pass one - strict() rejects any extra keys (including 'id')
+// to make typos and id-injection attempts loud rather than silent.
+export const CreateEmployeeSchema = EmployeeSchema.omit({ id: true }).strict();
+
+export type CreateEmployee = z.infer<typeof CreateEmployeeSchema>;
