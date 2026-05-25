@@ -152,3 +152,91 @@ describe('EmployeeService.delete', () => {
     expect(second).toBe(false);
   });
 });
+
+describe('EmployeeService.list', () => {
+  let service: EmployeeService;
+
+  const seedNamed = async (count: number) => {
+    for (let i = 0; i < count; i += 1) {
+      await service.create({
+        ...validInput,
+        fullName: `Employee ${String(i + 1).padStart(3, '0')}`,
+        email: `employee${i + 1}@example.com`,
+      });
+    }
+  };
+
+  beforeEach(() => {
+    service = new EmployeeService(new InMemoryEmployeeRepository(), sequentialIds());
+  });
+
+  it('returns an empty page for an empty repository', async () => {
+    const result = await service.list();
+
+    expect(result.items).toEqual([]);
+    expect(result.total).toBe(0);
+  });
+
+  it('returns every employee when total fits inside one page', async () => {
+    await seedNamed(3);
+
+    const result = await service.list({ page: 1, pageSize: 10 });
+
+    expect(result.items).toHaveLength(3);
+    expect(result.total).toBe(3);
+  });
+
+  it('orders results alphabetically by fullName for stable pagination', async () => {
+    await service.create({ ...validInput, fullName: 'Zoe Sharma' });
+    await service.create({ ...validInput, fullName: 'Adam Kapoor' });
+    await service.create({ ...validInput, fullName: 'Mia Patel' });
+
+    const result = await service.list({ page: 1, pageSize: 10 });
+
+    expect(result.items.map((e) => e.fullName)).toEqual([
+      'Adam Kapoor',
+      'Mia Patel',
+      'Zoe Sharma',
+    ]);
+  });
+
+  it('returns the requested page slice', async () => {
+    await seedNamed(25);
+
+    const page2 = await service.list({ page: 2, pageSize: 10 });
+
+    expect(page2.items).toHaveLength(10);
+    expect(page2.items[0]?.fullName).toBe('Employee 011');
+    expect(page2.items[9]?.fullName).toBe('Employee 020');
+    expect(page2.total).toBe(25);
+    expect(page2.page).toBe(2);
+    expect(page2.pageSize).toBe(10);
+  });
+
+  it('returns an empty page past the last page (without changing total)', async () => {
+    await seedNamed(5);
+
+    const past = await service.list({ page: 10, pageSize: 10 });
+
+    expect(past.items).toEqual([]);
+    expect(past.total).toBe(5);
+  });
+
+  it('applies sensible defaults when no query is supplied', async () => {
+    await seedNamed(3);
+
+    const result = await service.list();
+
+    expect(result.page).toBe(1);
+    expect(result.pageSize).toBeGreaterThan(0);
+    expect(result.items).toHaveLength(3);
+  });
+
+  it('caps pageSize so a caller cannot ask for everything in one call', async () => {
+    await seedNamed(5);
+
+    const result = await service.list({ pageSize: 100_000 });
+
+    expect(result.pageSize).toBeLessThanOrEqual(200);
+  });
+});
