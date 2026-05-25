@@ -6,6 +6,7 @@ import { EmployeeSchema } from '../src/employee';
 const validEmployee = {
   fullName: 'Jane Doe',
   jobTitle: 'Software Engineer',
+  country: 'IN',
 };
 
 describe('EmployeeSchema', () => {
@@ -78,6 +79,39 @@ describe('EmployeeSchema', () => {
       if (result.success) {
         expect(result.data.jobTitle).toBe('Engineer');
       }
+    });
+  });
+
+  describe('country', () => {
+    it('accepts a valid ISO-3166-1 alpha-2 code', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, country: 'US' });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects a three-letter country code', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, country: 'USA' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a one-letter country code', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, country: 'U' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a lowercase country code', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, country: 'us' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a country code containing a digit', () => {
+      const result = EmployeeSchema.safeParse({ ...validEmployee, country: 'U1' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a missing country', () => {
+      const { country: _omit, ...rest } = validEmployee;
+      const result = EmployeeSchema.safeParse(rest);
+      expect(result.success).toBe(false);
     });
   });
 });
