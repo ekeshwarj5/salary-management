@@ -63,6 +63,18 @@ The intent is not to log every keystroke, but to capture the *non-obvious* promp
 
 **Validation discipline**: Tests after every endpoint. Final suite at 79 green (25 service + 30 contract + 24 routes).
 
+## Phase 6 — Insights
+
+**Prompt**: _Add an InsightsService that computes salary aggregates per country and per title-within-country, plus an overview with headcount top lists. Group by (country, currency) and (jobTitle, currency) so cross-currency averages never appear — they're mathematically meaningless. Include median alongside avg/min/max because salary distributions are right-skewed. First add findAll() to the repository contract (analytics needs the whole dataset); then service + tests; then routes. Refactor buildApp to take a services object so adding insights doesn't bend the signature._
+
+**Why**:
+- The (country, currency) grouping was the load-bearing call. The naïve "average salary in IN" would silently mix INR-paid Indians with USD-paid expats and produce a junk number. Per-currency rows surface the truth.
+- Median is the metric the spec didn't ask for but the persona needs — the HR Manager who looks at "average salary" gets misled by a few SVPs. Adding it cost ~6 lines and one helper.
+- Pushing `findAll()` into the contract (not into the service as a side-channel) keeps the repository abstraction whole; both repos satisfy the new method via the existing contract suite.
+- Refactoring `buildApp` to a services object early prevents a worse refactor later when the seed CLI or a second analytics service joins.
+
+**Validation discipline**: Tests after each cycle (findAll → service-by-country → service-by-title → service-overview → routes). Final suite at 105 green.
+
 ---
 
 > Subsequent phases will append here as we build.

@@ -157,3 +157,36 @@ A short, chronological log of what shipped in each phase, what was validated, wh
 **Commits**: 5 (POST, GET single, PATCH, DELETE, GET list).
 
 ---
+
+## Phase 6 — Insights service + routes
+
+**Goal**: Deliver the salary analytics the spec calls out (min/max/avg per country, avg per title-in-country) plus a useful overview, and expose them over HTTP.
+
+**Shipped**:
+- Repository contract extended with `findAll()` — the analytics layer needs the whole dataset to compute medians and per-currency aggregations. Both repository implementations satisfy the new assertion.
+- `InsightsService`:
+  - `getByCountry()` — salary aggregates (count, min, max, avg, **median**) grouped by `(country, currency)`. Median is reported in addition to mean because salary distributions are right-skewed and the mean alone misleads.
+  - `getByTitleInCountry(country)` — same aggregates per `(jobTitle, currency)` within one country.
+  - `getOverview()` — total headcount, distinct countries, distinct titles, top-10 countries and top-10 titles by headcount. No salary aggregation here, so cross-currency math is avoided entirely.
+- `insightsRoutes`:
+  - `GET /insights/by-country`
+  - `GET /insights/by-title?country=XX` (required, validated against `^[A-Z]{2}$`)
+  - `GET /insights/overview`
+- `buildApp` was refactored from a positional `service` argument to a `{ employees, insights }` services object — future services slot in without further breaking changes.
+
+**Validation**: 14 new tests (6 service + 8 route). Total suite at 105 green.
+
+**Deferred**:
+- Cross-currency salary normalisation (FX rates). Modelling FX is out of scope; per-currency aggregations are honest about the data and avoid producing fake numbers.
+- Salary distribution buckets / histograms — the median + min/max already give the distribution shape; explicit histograms are UI-side polish that can be derived without a backend change.
+
+**Files**:
+- `server/src/services/insights-service.ts`, `server/test/insights-service.test.ts`
+- `server/src/routes/insights.ts`, `server/test/routes/insights.test.ts`
+- `server/src/app.ts` (services-object refactor)
+- `server/src/services/employee-service.ts` + repositories + repository contract (`findAll`)
+- `server/test/routes/employees.test.ts` (updated `buildApp` call)
+
+**Commits**: 4 (findAll on repo, getByCountry+getByTitleInCountry, getOverview, routes).
+
+---
