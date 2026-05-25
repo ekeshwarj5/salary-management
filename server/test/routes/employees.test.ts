@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import type { CreateEmployee } from '@salary/shared';
 import { buildApp } from '../../src/app';
 import { EmployeeService } from '../../src/services/employee-service';
+import { InsightsService } from '../../src/services/insights-service';
 import { InMemoryEmployeeRepository } from '../../src/repositories/in-memory-employee-repository';
 
 const validPayload: CreateEmployee = {
@@ -28,8 +29,10 @@ describe('POST /employees', () => {
   let app: FastifyInstance;
 
   beforeEach(async () => {
-    const service = new EmployeeService(new InMemoryEmployeeRepository(), sequentialIds());
-    app = buildApp(service);
+    const repo = new InMemoryEmployeeRepository();
+    const employees = new EmployeeService(repo, sequentialIds());
+    const insights = new InsightsService(repo);
+    app = buildApp({ employees, insights });
     await app.ready();
   });
 
@@ -103,8 +106,10 @@ describe('GET /employees/:id', () => {
   let app: FastifyInstance;
 
   beforeEach(async () => {
-    const service = new EmployeeService(new InMemoryEmployeeRepository(), sequentialIds());
-    app = buildApp(service);
+    const repo = new InMemoryEmployeeRepository();
+    const employees = new EmployeeService(repo, sequentialIds());
+    const insights = new InsightsService(repo);
+    app = buildApp({ employees, insights });
     await app.ready();
   });
 
@@ -146,8 +151,10 @@ describe('PATCH /employees/:id', () => {
     (await app.inject({ method: 'POST', url: '/employees', payload: validPayload })).json();
 
   beforeEach(async () => {
-    const service = new EmployeeService(new InMemoryEmployeeRepository(), sequentialIds());
-    app = buildApp(service);
+    const repo = new InMemoryEmployeeRepository();
+    const employees = new EmployeeService(repo, sequentialIds());
+    const insights = new InsightsService(repo);
+    app = buildApp({ employees, insights });
     await app.ready();
   });
 
@@ -241,8 +248,10 @@ describe('DELETE /employees/:id', () => {
     (await app.inject({ method: 'POST', url: '/employees', payload: validPayload })).json();
 
   beforeEach(async () => {
-    const service = new EmployeeService(new InMemoryEmployeeRepository(), sequentialIds());
-    app = buildApp(service);
+    const repo = new InMemoryEmployeeRepository();
+    const employees = new EmployeeService(repo, sequentialIds());
+    const insights = new InsightsService(repo);
+    app = buildApp({ employees, insights });
     await app.ready();
   });
 
@@ -291,8 +300,10 @@ describe('GET /employees', () => {
     ).json();
 
   beforeEach(async () => {
-    const service = new EmployeeService(new InMemoryEmployeeRepository(), sequentialIds());
-    app = buildApp(service);
+    const repo = new InMemoryEmployeeRepository();
+    const employees = new EmployeeService(repo, sequentialIds());
+    const insights = new InsightsService(repo);
+    app = buildApp({ employees, insights });
     await app.ready();
   });
 
