@@ -7,5 +7,5 @@ import { runEmployeeRepositoryContract } from './employee-repository.contract';
 // at near-zero cost.
 runEmployeeRepositoryContract(
   'SqliteEmployeeRepository',
-  () => new SqliteEmployeeRepository(createDb(':memory:')),
+  () => new SqliteEmployeeRepository(createDb(':memory:').db),
 );

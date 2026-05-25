@@ -48,9 +48,16 @@ export interface EmployeeRepository {
   findAll(): Promise<Employee[]>;
 }
 
-export interface ListOptions extends ListFilters {
-  page?: number;
-  pageSize?: number;
+// `| undefined` on each optional matches Zod's inferred shape for
+// `.optional()` (Zod produces `T | undefined`, not "key may be absent")
+// so the route layer can pass parsed query data through without casts
+// under exactOptionalPropertyTypes.
+export interface ListOptions {
+  page?: number | undefined;
+  pageSize?: number | undefined;
+  country?: string | undefined;
+  jobTitle?: string | undefined;
+  search?: string | undefined;
 }
 
 const DEFAULT_PAGE_SIZE = 20;

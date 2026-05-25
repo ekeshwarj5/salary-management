@@ -3,28 +3,32 @@ import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 
 export type Db = BetterSQLite3Database;
 
+export interface DbContext {
+  /** Drizzle-wrapped query API used by repositories and routes. */
+  db: Db;
+  /** Raw better-sqlite3 connection. Use only for hot paths that need
+   *  prepared statements + transactions (e.g. the bulk seed). */
+  sqlite: Database.Database;
+}
+
 /**
- * Create a Drizzle-wrapped better-sqlite3 client and ensure the schema
- * exists. `:memory:` is the right choice for tests; a file path is used
- * in dev / prod.
- *
- * WAL mode is enabled on file-backed databases so reads don't block writes;
- * it's a no-op for the in-memory database.
+ * Open a database, enable WAL on file-backed paths, and idempotently
+ * ensure the schema. Same call path runs in tests (:memory:) and prod.
  */
-export const createDb = (path: string): Db => {
+export const createDb = (path: string): DbContext => {
   const sqlite = new Database(path);
   if (path !== ':memory:') {
     sqlite.pragma('journal_mode = WAL');
   }
   sqlite.pragma('foreign_keys = ON');
   ensureSchema(sqlite);
-  return drizzle(sqlite);
+  return { db: drizzle(sqlite), sqlite };
 };
 
 /**
- * Programmatic schema creation. We keep this co-located with the Drizzle
- * schema so the two stay in sync; if columns are added in `schema.ts`,
- * the matching CREATE statement here is the second edit.
+ * Programmatic schema creation, kept co-located with the Drizzle table
+ * definition. If columns are added in `schema.ts`, the matching CREATE
+ * statement here is the second edit.
  *
  * Using IF NOT EXISTS makes the call idempotent for both dev and tests.
  */
