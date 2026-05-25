@@ -20,7 +20,10 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
   async update(id: string, patch: UpdateEmployee): Promise<Employee | null> {
     const existing = this.employees.get(id);
     if (!existing) return null;
-    const updated: Employee = { ...existing, ...patch };
+    // The schema layer guarantees `patch` only contains keys with defined
+    // values (strict + non-empty refine), so spreading it over the existing
+    // record cannot reintroduce undefineds at runtime.
+    const updated = { ...existing, ...patch } as Employee;
     this.employees.set(id, updated);
     return updated;
   }
