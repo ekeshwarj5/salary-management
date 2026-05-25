@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { ZodError } from 'zod';
-import { CreateEmployeeSchema } from '@salary/shared';
+import { CreateEmployeeSchema, UpdateEmployeeSchema } from '@salary/shared';
 import type { EmployeeService } from '../services/employee-service';
 
 const sendValidationError = (reply: FastifyReply, error: ZodError) =>
@@ -33,5 +33,17 @@ export const employeeRoutes = (service: EmployeeService) => async (app: FastifyI
       return notFound(reply, id);
     }
     return employee;
+  });
+
+  app.patch<{ Params: { id: string } }>('/employees/:id', async (request, reply) => {
+    const parsed = UpdateEmployeeSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return sendValidationError(reply, parsed.error);
+    }
+    const updated = await service.update(request.params.id, parsed.data);
+    if (!updated) {
+      return notFound(reply, request.params.id);
+    }
+    return updated;
   });
 };

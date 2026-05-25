@@ -138,3 +138,98 @@ describe('GET /employees/:id', () => {
     expect(response.statusCode).toBe(404);
   });
 });
+
+describe('PATCH /employees/:id', () => {
+  let app: FastifyInstance;
+
+  const createOne = async () =>
+    (await app.inject({ method: 'POST', url: '/employees', payload: validPayload })).json();
+
+  beforeEach(async () => {
+    const service = new EmployeeService(new InMemoryEmployeeRepository(), sequentialIds());
+    app = buildApp(service);
+    await app.ready();
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('returns 200 with the merged employee', async () => {
+    const created = await createOne();
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/employees/${created.id}`,
+      payload: { salary: 2_500_000, jobTitle: 'Senior Engineer' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      ...created,
+      salary: 2_500_000,
+      jobTitle: 'Senior Engineer',
+    });
+  });
+
+  it('persists the change (subsequent GET returns the new values)', async () => {
+    const created = await createOne();
+
+    await app.inject({
+      method: 'PATCH',
+      url: `/employees/${created.id}`,
+      payload: { country: 'US' },
+    });
+    const refetched = (
+      await app.inject({ method: 'GET', url: `/employees/${created.id}` })
+    ).json();
+
+    expect(refetched.country).toBe('US');
+  });
+
+  it('returns 404 when the employee does not exist', async () => {
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/employees/00000000-0000-4000-8000-999999999999',
+      payload: { salary: 1 },
+    });
+
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('returns 400 when the payload is empty', async () => {
+    const created = await createOne();
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/employees/${created.id}`,
+      payload: {},
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('returns 400 when the payload tries to change id', async () => {
+    const created = await createOne();
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/employees/${created.id}`,
+      payload: { id: '550e8400-e29b-41d4-a716-446655440000' },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('returns 400 when a field value is invalid', async () => {
+    const created = await createOne();
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/employees/${created.id}`,
+      payload: { country: 'usa' },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+});
