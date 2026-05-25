@@ -32,6 +32,10 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
     return this.employees.delete(id);
   }
 
+  async findAll(): Promise<Employee[]> {
+    return [...this.employees.values()];
+  }
+
   async list(query: ListQuery): Promise<ListResult> {
     const search = query.search?.toLowerCase();
     const filtered = [...this.employees.values()].filter((e) => {

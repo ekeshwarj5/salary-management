@@ -52,6 +52,22 @@ export const runEmployeeRepositoryContract = (
       });
     });
 
+    describe('findAll', () => {
+      it('returns an empty array for an empty repo', async () => {
+        expect(await repo.findAll()).toEqual([]);
+      });
+
+      it('returns every inserted employee (analytics path)', async () => {
+        await repo.insert(employee({ id: uuid(1) }));
+        await repo.insert(employee({ id: uuid(2) }));
+
+        const all = await repo.findAll();
+
+        expect(all).toHaveLength(2);
+        expect(all.map((e) => e.id).sort()).toEqual([uuid(1), uuid(2)]);
+      });
+    });
+
     describe('update', () => {
       it('merges the patch and persists it', async () => {
         const e = employee();

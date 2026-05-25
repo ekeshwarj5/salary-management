@@ -40,6 +40,12 @@ export interface EmployeeRepository {
   update(id: string, patch: UpdateEmployee): Promise<Employee | null>;
   delete(id: string): Promise<boolean>;
   list(query: ListQuery): Promise<ListResult>;
+  /**
+   * Returns every employee. Used by the analytics layer, which needs
+   * the full dataset to compute medians and per-currency aggregations.
+   * Not exposed over HTTP — list() with pagination is the public path.
+   */
+  findAll(): Promise<Employee[]>;
 }
 
 export interface ListOptions extends ListFilters {

@@ -44,6 +44,10 @@ export class SqliteEmployeeRepository implements EmployeeRepository {
     return result.changes > 0;
   }
 
+  async findAll(): Promise<Employee[]> {
+    return this.db.select().from(employees).all();
+  }
+
   async list(query: ListQuery): Promise<ListResult> {
     const conditions: SQL[] = [];
     if (query.country) conditions.push(eq(employees.country, query.country));
