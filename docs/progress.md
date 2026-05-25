@@ -68,3 +68,32 @@ A short, chronological log of what shipped in each phase, what was validated, wh
 **Commits**: 7 TDD steps (zod install, fullName, jobTitle, country, salary+currency, email+department+joinedAt, id, CreateEmployeeSchema, UpdateEmployeeSchema).
 
 ---
+
+## Phase 3 — Employee service + in-memory repository
+
+**Goal**: Build the business-logic layer (`EmployeeService`) that the HTTP routes will sit on, drive it entirely with TDD against an `InMemoryEmployeeRepository`, and define the repository interface that the future SQLite implementation will have to satisfy.
+
+**Shipped**:
+- `EmployeeRepository` port (interface) with `insert / findById / update / delete / list`. Services depend on the port, not on any database.
+- `EmployeeService` operations:
+  - `create(input)` — accepts a (schema-validated) `CreateEmployee`, generates a UUID, returns the stored record. The id generator is injectable for deterministic tests.
+  - `findById(id)` — returns `Employee | null`.
+  - `update(id, patch)` — merges the patch over the existing record and returns the new value; returns `null` for unknown id so the route can map it to 404.
+  - `delete(id)` — returns `boolean`; idempotent.
+  - `list({ page?, pageSize?, country?, jobTitle?, search? })` — paginated, filtered list. Defaults: page 1, pageSize 20, max pageSize 200. Filters: exact match on country and jobTitle, case-insensitive substring on fullName.
+- `InMemoryEmployeeRepository` — reference implementation used by the service tests; it doubles as the contract that the SQLite repository will need to satisfy in Phase 4.
+
+**Validation**: 25 service tests passing across create / findById / update / delete / list (basic + pagination + filters + combined filters + filter-aware pagination).
+
+**Deferred**:
+- Bulk operations (`insertMany`) — the seed script will need this for the 10K-row insert, but it lives outside the service contract; seeding bypasses the service.
+- Sorting beyond `fullName, id` — not required by the spec; can extend `ListOptions` later if the UI grows a sort affordance.
+
+**Files**:
+- `server/src/services/employee-service.ts`
+- `server/src/repositories/in-memory-employee-repository.ts`
+- `server/test/employee-service.test.ts`
+
+**Commits**: 5 TDD steps (create+findById, update, delete, list+pagination, list filtering).
+
+---

@@ -28,6 +28,18 @@ The intent is not to log every keystroke, but to capture the *non-obvious* promp
 
 **Validation discipline**: After each cycle, ran `npm test --workspace=@salary/shared`; would not commit on red. The single red-then-green sequence happened in the first cycle (deliberate, to show the rhythm in `docs/prompts.md`); subsequent cycles ran against the already-passing suite.
 
+## Phase 3 — Service + in-memory repo (TDD)
+
+**Prompt**: _Build EmployeeService and an InMemoryEmployeeRepository with TDD. Service depends on a repository interface (port), never on a concrete DB. One commit per CRUD method, plus one for list+pagination, plus one for list filters. Inject the id generator so tests get deterministic UUIDs. Service trusts that input is already schema-validated upstream — types are the contract; don't double-validate inside the service._
+
+**Why**:
+- The port/adapter split is the move that makes SQLite swap-in painless in Phase 4 and keeps the service tests at unit-test speed.
+- Injectable id generator over mocking `crypto.randomUUID()` — the seam is explicit in the type and trivially overridable; no global state to reset.
+- Splitting list into "pagination" and "filters" commits keeps each diff small enough to read in one breath. Combining them would have been ~10 tests in one commit.
+- The decision to *not* re-validate inside the service was deliberate: a redundant `CreateEmployeeSchema.parse()` here would muddy the boundary, slow the seed path (which calls a similar shape), and conflict with the type-first contract.
+
+**Validation discipline**: Each cycle ran `npm test --workspace=@salary/server` before committing. Final suite at 25 green.
+
 ---
 
 > Subsequent phases will append here as we build.
