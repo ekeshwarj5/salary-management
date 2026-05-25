@@ -229,3 +229,46 @@ A short, chronological log of what shipped in each phase, what was validated, wh
 **Commits**: 3 (name data, seed + perf doc, server.ts + CORS).
 
 ---
+
+## Phase 8 — React client scaffold
+
+**Goal**: Stand up an empty-but-runnable client workspace wired to the existing API, with a UI primitive set, a typed API client, a data-fetching layer, routing, and a layout shell — so the next two phases can land features without scaffolding interruptions.
+
+**Shipped**:
+- `client/` workspace generated via `npm create vite@latest --template react-ts`, then trimmed: ESLint config removed (none of the other workspaces have it), demo App / CSS / assets dropped, two extra tsconfig files merged into one that extends `tsconfig.base.json`.
+- Workspace registered at the repo root; `@salary/shared` listed as a dep so the client and server share types.
+- **Tailwind v4** via `@tailwindcss/vite` + `@import 'tailwindcss'` in `index.css`. `@theme` block defines the project's color and font tokens; no `tailwind.config.js` needed.
+- **Handwritten UI primitives** (`Button`, `Input`, `Select`, `Card`) instead of pulling in `shadcn/ui`. ~120 lines total, fully readable in one sitting, no shadcn CLI step to reproduce on a fresh clone.
+- **`src/lib/api.ts`** — typed fetch wrapper covering all employee + insights endpoints. Throws `ApiError` carrying the server's `ValidationError` body verbatim so forms can highlight specific fields without a follow-up request.
+- **`src/lib/queryClient.ts`** — one `QueryClient` tuned for HR usage: `staleTime: 30s`, no refetch-on-focus, one retry.
+- **`src/components/Layout.tsx`** — top-nav shell with `NavLink`s and an `Outlet`.
+- **Routing** via `createBrowserRouter`; `/` redirects to `/employees`, with `/insights` for the next phase.
+- **Insights output types lifted into `shared/`** (`CountrySalaryInsight`, `TitleSalaryInsight`, `OverviewInsight`) so the client and server agree on the contract from one source.
+- **`vite-env.d.ts`** — `VITE_API_URL` env var typing; defaults to `http://localhost:3000` when not set.
+
+**Validation**:
+- `npm run typecheck` clean across all three workspaces.
+- `npm run build` (client) produces `dist/index.html`, **98 kB gzipped JS, 3 kB gzipped CSS** — small enough that performance is a non-concern.
+- All existing server tests still pass (105 green).
+
+**Deferred**:
+- `shadcn/ui` — the handwritten primitives are simpler, the diff is half the size, and a reviewer can read every prop without leaving the file.
+- Vite dev-server proxy for `/employees` / `/insights` — CORS is already on the server, so direct fetch from `localhost:5173` works without it. Adding the proxy would be redundant configuration.
+- ESLint — kept off for consistency with the other workspaces. Easy to add later if the team wants commit-time enforcement.
+
+**Trade-off worth recording**:
+- `vite.config.ts` is excluded from `tsc --noEmit` because Vitest vendors its own copy of `vite`, and the two copies cause a type-identity clash that surfaces dozens of false positives under `exactOptionalPropertyTypes`. Vite executes the config through its own loader at runtime; tsc has no business typechecking it.
+
+**Files**:
+- `client/package.json`, `client/tsconfig.json`, `client/vite.config.ts`, `client/index.html`
+- `client/src/{main.tsx, App.tsx, index.css, vite-env.d.ts}`
+- `client/src/lib/{cn.ts, api.ts, queryClient.ts}`
+- `client/src/components/{Layout.tsx, ui/Button.tsx, ui/Input.tsx, ui/Select.tsx, ui/Card.tsx}`
+- `client/src/features/employees/EmployeesPage.tsx`, `client/src/features/insights/InsightsPage.tsx`
+- `client/test/setup.ts`
+- `package.json` (workspace registration)
+- `shared/src/insights.ts` (new), `shared/src/index.ts` (re-exports), `server/src/services/insights-service.ts` (now re-exports)
+
+**Commits**: 4 (Vite scaffold, Tailwind + primitives, shared-insights refactor, API client + Query + Router + layout).
+
+---

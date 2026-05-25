@@ -87,6 +87,19 @@ The intent is not to log every keystroke, but to capture the *non-obvious* promp
 
 **Validation discipline**: Three benchmark runs with `--seed=42`; sanity-checked the table with a SQL aggregation; smoke-tested the wired server with curl across all five HTTP surfaces.
 
+## Phase 8 — Client scaffold
+
+**Prompt**: _Scaffold the client workspace with `npm create vite@latest --template react-ts`, then trim aggressively — drop the ESLint config (keep consistent with the other workspaces), kill the demo App / assets, merge the two tsconfig files into one that extends our base. Use Tailwind v4 (CSS-first @theme block, no tailwind.config.js). Write the four UI primitives (Button / Input / Select / Card) by hand rather than reaching for shadcn — the diff is half the size and a reviewer can read every prop without leaving the file. Move the insights output types from server/ to shared/ so the client and server agree on the contract from one source. Typed fetch wrapper in lib/api.ts; one QueryClient with 30s staleTime + no refetch-on-focus (HR doesn't want the table reshuffling when they tab back); React Router with `/` redirecting to `/employees`. Land everything as a runnable empty shell so phases 9 and 10 are pure feature work._
+
+**Why**:
+- Vite's interactive template is a fast first step; the trim afterwards is the bigger half of the work and makes the workspace match the existing two (no ESLint, single tsconfig, our base config).
+- Tailwind v4's CSS-first model removes the `tailwind.config.js + postcss + content globs` triplet entirely — fewer concepts, smaller diff, identical output.
+- Writing primitives by hand vs adopting shadcn was a deliberate trade-off: shadcn's components are excellent, but the CLI is a reproduction step on a fresh clone and the file count balloons. For four components, hand-writing wins on signal.
+- Moving insights types to shared *before* the client consumes them removes a tempting client → server import path that nothing should ever take.
+- Excluding `vite.config.ts` from tsc was a load-bearing call: vitest vendors its own `vite`, and the type-identity clash surfaces dozens of false errors that don't reflect real bugs. Documented the trade-off in the commit message and in `docs/progress.md`.
+
+**Validation discipline**: `npm run typecheck` and `npm run build` after each commit; commit only when both are clean. Final bundle: 98 kB gzipped JS, 3 kB gzipped CSS.
+
 ---
 
 > Subsequent phases will append here as we build.
