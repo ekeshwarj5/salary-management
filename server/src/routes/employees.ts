@@ -13,6 +13,9 @@ const sendValidationError = (reply: FastifyReply, error: ZodError) =>
     })),
   });
 
+const notFound = (reply: FastifyReply, id: string) =>
+  reply.code(404).send({ error: 'NotFound', message: `employee ${id} not found` });
+
 export const employeeRoutes = (service: EmployeeService) => async (app: FastifyInstance) => {
   app.post('/employees', async (request, reply) => {
     const parsed = CreateEmployeeSchema.safeParse(request.body);
@@ -21,5 +24,14 @@ export const employeeRoutes = (service: EmployeeService) => async (app: FastifyI
     }
     const employee = await service.create(parsed.data);
     return reply.code(201).send(employee);
+  });
+
+  app.get<{ Params: { id: string } }>('/employees/:id', async (request, reply) => {
+    const { id } = request.params;
+    const employee = await service.findById(id);
+    if (!employee) {
+      return notFound(reply, id);
+    }
+    return employee;
   });
 };

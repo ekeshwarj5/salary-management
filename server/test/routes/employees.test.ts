@@ -98,3 +98,43 @@ describe('POST /employees', () => {
     expect(response.statusCode).toBe(400);
   });
 });
+
+describe('GET /employees/:id', () => {
+  let app: FastifyInstance;
+
+  beforeEach(async () => {
+    const service = new EmployeeService(new InMemoryEmployeeRepository(), sequentialIds());
+    app = buildApp(service);
+    await app.ready();
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('returns 200 with the employee when it exists', async () => {
+    const created = (
+      await app.inject({ method: 'POST', url: '/employees', payload: validPayload })
+    ).json();
+
+    const response = await app.inject({ method: 'GET', url: `/employees/${created.id}` });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual(created);
+  });
+
+  it('returns 404 when the employee does not exist', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/employees/00000000-0000-4000-8000-999999999999',
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error).toBe('NotFound');
+  });
+
+  it('returns 404 for a non-UUID id (treated as not found)', async () => {
+    const response = await app.inject({ method: 'GET', url: '/employees/garbage' });
+    expect(response.statusCode).toBe(404);
+  });
+});
