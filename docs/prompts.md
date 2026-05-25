@@ -75,6 +75,18 @@ The intent is not to log every keystroke, but to capture the *non-obvious* promp
 
 **Validation discipline**: Tests after each cycle (findAll → service-by-country → service-by-title → service-overview → routes). Final suite at 105 green.
 
+## Phase 7 — Seed + benchmark + server wiring
+
+**Prompt**: _Write a seed script that produces 10,000 employees fast. Bypass the repository contract — the contract serves the app, not bulk ETL. Use better-sqlite3 directly with one prepared statement inside one transaction; expose the raw sqlite handle from createDb (which now returns { db, sqlite }) so seed gets fast access without changing how routes and repos see the DB. Names come from two flat text files, slurped once. Use a mulberry32 PRNG behind `--seed=N` for reproducible benchmark runs; default to Math.random. Truncate the table before insert so re-runs are idempotent. After it works, run it 3× and record the median in docs/performance.md alongside the rejected alternatives. Then wire server.ts (DATABASE_PATH / PORT / HOST env vars, @fastify/cors so the Vite dev server can hit it)._
+
+**Why**:
+- Pushing bulk-insert into the repo contract would have polluted an interface that nothing else needs; the seed is a one-shot CLI, not a service. Exposing the raw sqlite handle through createDb's return value is the smallest surface change that unlocks the perf path.
+- Prepared statement + transaction is the well-known winning pattern for better-sqlite3; measuring the result (~52 ms / 10K rows) and writing it down — including what *wasn't* picked and why — is the documentation that actually convinces a reviewer.
+- The mulberry32 seed flag is a tiny investment that makes benchmarks comparable run-to-run and bug repros trivial; without it, "I can't reproduce" is a real risk.
+- `@fastify/cors` had to land here, not in the client phase, so the moment Vite boots in Phase 8 it can fetch from `localhost:3000` without a surprise.
+
+**Validation discipline**: Three benchmark runs with `--seed=42`; sanity-checked the table with a SQL aggregation; smoke-tested the wired server with curl across all five HTTP surfaces.
+
 ---
 
 > Subsequent phases will append here as we build.

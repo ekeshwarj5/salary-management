@@ -190,3 +190,42 @@ A short, chronological log of what shipped in each phase, what was validated, wh
 **Commits**: 4 (findAll on repo, getByCountry+getByTitleInCountry, getOverview, routes).
 
 ---
+
+## Phase 7 — Seed script + benchmark + server wiring
+
+**Goal**: Make the system runnable end-to-end. Generate a realistic 10K-employee dataset fast enough that engineers re-run it casually, and stand up the Fastify process so a UI can talk to it.
+
+**Shipped**:
+- `data/first_names.txt`, `data/last_names.txt` — 100 each, mix of naming traditions. 10,000 unique combinations available.
+- `server/src/db/client.ts` refactored: `createDb(path)` now returns `{ db, sqlite }`. Application code keeps using Drizzle (`db`); the seed uses raw `sqlite` for the prepared-statement + transaction hot path.
+- `server/src/seed.ts` — CLI script:
+  - `--count=N` (default 10,000), `--db=path` (default `./data.db`), `--seed=N` (mulberry32 for reproducible runs).
+  - Single `sqlite.transaction(...)` wraps every insert; one prepared statement bound 10,000 times.
+  - `COUNTRY_PROFILES` pairs each country with its currency and a market-realistic salary band so insights endpoints demonstrate meaningful variance.
+  - `DELETE FROM employees` before insert so re-runs are idempotent.
+- `server/src/server.ts` — boots Fastify against SQLite using the wired services, reads `DATABASE_PATH` / `PORT` / `HOST` from env.
+- `server/src/app.ts` — `buildApp(services, { logger, corsOrigin })` accepts options; `@fastify/cors` reflects any origin so the React dev server can call the API.
+- `server/package.json` adds `npm run seed`.
+- `README.md` documents `npm run dev` and `npm run seed`.
+- `docs/performance.md` records measured timings (~52 ms median for 10K), techniques used, and rejected alternatives.
+
+**Validation**:
+- Three back-to-back runs: 54 / 51 / 52 ms for 10K rows (median **~52 ms**, ~195K rows/sec).
+- `sqlite3 data.db` GROUP BY country: 12 countries, ~833 rows each, salaries within their per-country bands.
+- Smoke test: server started on :3001, `GET /insights/overview` returns totals (10K / 12 / 20), `GET /employees?pageSize=2` returns paginated rows in ~5 ms after warmup, `GET /insights/by-country` returns per-currency aggregates including median.
+
+**Deferred**:
+- Drizzle-based bulk insert path — was a candidate but ~5–10× slower than raw prepared statement for this size. Documented as a rejected alternative in `docs/performance.md`.
+- Multi-row chunked `INSERT VALUES (), (), ()` — comparable speed, more code, parameter-count ceiling. Single prepared + transaction is the simpler and equally fast win.
+- A separate `--append` mode — kept truncate-on-seed as the only behaviour; engineers wanting incremental seeds can run with a different `--db=`.
+
+**Files**:
+- `data/first_names.txt`, `data/last_names.txt`
+- `server/src/seed.ts`, `server/src/server.ts`
+- `server/src/db/client.ts`, `server/src/app.ts`
+- `server/src/services/employee-service.ts` (ListOptions allows `| undefined` for Zod compat)
+- `server/package.json`, `README.md`, `docs/performance.md`, `.gitignore`
+
+**Commits**: 3 (name data, seed + perf doc, server.ts + CORS).
+
+---
