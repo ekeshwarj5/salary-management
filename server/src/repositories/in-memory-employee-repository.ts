@@ -1,4 +1,4 @@
-import type { Employee } from '@salary/shared';
+import type { Employee, UpdateEmployee } from '@salary/shared';
 import type { EmployeeRepository } from '../services/employee-service';
 
 /**
@@ -15,5 +15,13 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
 
   async findById(id: string): Promise<Employee | null> {
     return this.employees.get(id) ?? null;
+  }
+
+  async update(id: string, patch: UpdateEmployee): Promise<Employee | null> {
+    const existing = this.employees.get(id);
+    if (!existing) return null;
+    const updated: Employee = { ...existing, ...patch };
+    this.employees.set(id, updated);
+    return updated;
   }
 }

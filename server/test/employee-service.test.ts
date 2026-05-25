@@ -66,3 +66,51 @@ describe('EmployeeService.findById', () => {
     expect(found).toBeNull();
   });
 });
+
+describe('EmployeeService.update', () => {
+  let service: EmployeeService;
+
+  beforeEach(() => {
+    service = new EmployeeService(new InMemoryEmployeeRepository(), sequentialIds());
+  });
+
+  it('returns the updated employee with merged fields', async () => {
+    const original = await service.create(validInput);
+
+    const updated = await service.update(original.id, {
+      jobTitle: 'Senior Software Engineer',
+      salary: 2_500_000,
+    });
+
+    expect(updated).toEqual({
+      ...original,
+      jobTitle: 'Senior Software Engineer',
+      salary: 2_500_000,
+    });
+  });
+
+  it('leaves fields that are not in the patch unchanged', async () => {
+    const original = await service.create(validInput);
+
+    await service.update(original.id, { salary: 9_999_999 });
+    const refetched = await service.findById(original.id);
+
+    expect(refetched).toEqual({ ...original, salary: 9_999_999 });
+  });
+
+  it('returns null when the employee does not exist', async () => {
+    const result = await service.update('00000000-0000-4000-8000-999999999999', {
+      salary: 1,
+    });
+    expect(result).toBeNull();
+  });
+
+  it('persists the change so a subsequent read sees it', async () => {
+    const original = await service.create(validInput);
+    await service.update(original.id, { country: 'US' });
+
+    const refetched = await service.findById(original.id);
+
+    expect(refetched?.country).toBe('US');
+  });
+});

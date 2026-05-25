@@ -1,4 +1,4 @@
-import type { CreateEmployee, Employee } from '@salary/shared';
+import type { CreateEmployee, Employee, UpdateEmployee } from '@salary/shared';
 
 /**
  * Persistence port for the Employee aggregate. Services depend on this
@@ -9,6 +9,7 @@ import type { CreateEmployee, Employee } from '@salary/shared';
 export interface EmployeeRepository {
   insert(employee: Employee): Promise<void>;
   findById(id: string): Promise<Employee | null>;
+  update(id: string, patch: UpdateEmployee): Promise<Employee | null>;
 }
 
 export type IdGenerator = () => string;
@@ -29,5 +30,9 @@ export class EmployeeService {
 
   async findById(id: string): Promise<Employee | null> {
     return this.repo.findById(id);
+  }
+
+  async update(id: string, patch: UpdateEmployee): Promise<Employee | null> {
+    return this.repo.update(id, patch);
   }
 }
