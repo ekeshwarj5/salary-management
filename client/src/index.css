@@ -1,1 +1,28 @@
-/* Global styles. Tailwind is layered in by the next commit. */
+@import 'tailwindcss';
+
+@theme {
+  --color-bg: oklch(98.4% 0.003 247.86);
+  --color-surface: #ffffff;
+  --color-border: oklch(91% 0.005 247);
+  --color-text: oklch(20% 0.02 248);
+  --color-muted: oklch(50% 0.015 248);
+  --color-accent: oklch(56% 0.18 264);
+  --color-accent-hover: oklch(50% 0.19 264);
+  --color-danger: oklch(57% 0.22 27);
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
