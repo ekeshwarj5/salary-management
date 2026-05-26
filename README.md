@@ -1,79 +1,122 @@
 # Salary Management
 
-A minimal salary management tool for an HR Manager: CRUD over employees and salary insights for an organization of ~10,000 employees.
+A minimal, end-to-end salary management tool for the HR Manager of a ~10,000-person organisation. The HR Manager can browse, search, filter, add, edit and delete employees, and explore salary distributions per country and per job title.
 
 ## Stack
 
-- **Backend** — Node 20, TypeScript (strict), Fastify, Drizzle ORM, SQLite (`better-sqlite3`), Zod, Vitest
-- **Frontend** — React + Vite, TypeScript, Tailwind + shadcn/ui, TanStack Query, react-hook-form, Recharts, Testing Library
-- **Shared** — Zod schemas + inferred types used by both API and forms
+| Layer | Choice |
+|---|---|
+| Backend | Node 20 · TypeScript (strict) · Fastify · Drizzle ORM · `better-sqlite3` · Zod |
+| Frontend | React 19 · Vite · TypeScript · Tailwind v4 · TanStack Query · react-hook-form · Recharts |
+| Shared | Zod schemas + inferred types used by both API and forms |
+| Tests | Vitest across all workspaces; React Testing Library on the client |
 
-## Layout
+Design choices are recorded in [`docs/decisions.md`](docs/decisions.md).
+
+## Project layout
 
 ```
 salary-management/
-├── server/    # Fastify API + SQLite
-├── client/    # React + Vite UI
-├── shared/    # Zod schemas / types (consumed by both)
-├── data/      # first_names.txt, last_names.txt (for seed)
+├── shared/    # @salary/shared — Zod schemas + insight contract types
+├── server/    # @salary/server — Fastify API + SQLite + seed script
+├── client/    # @salary/client — React + Vite UI
+├── data/      # first_names.txt + last_names.txt for the seed
 └── docs/      # architecture, decisions, performance, prompts, progress
 ```
 
-## Run
+## Quick start
 
-> Requires Node 20+. Install once at the repo root — npm workspaces hoist dependencies.
-
-```bash
-npm install
-npm run build         # build all workspaces
-npm test              # run all tests
-npm run typecheck     # type-check all workspaces
-```
-
-Per-workspace commands are documented inside each workspace's `package.json`.
-
-## Test
-
-Tests are written first (TDD). Each commit reflects a single red → green → refactor step.
+Prerequisites: **Node 20+** (older versions of npm don't support the workspace flags used here).
 
 ```bash
-npm test                       # all workspaces
-npm test --workspace=server    # only server
-npm test --workspace=client    # only client
-npm test --workspace=shared    # only shared
+git clone git@github.com:ekeshwarj5/salary-management.git
+cd salary-management
+npm install              # installs all three workspaces
+
+# Seed 10,000 employees (~52 ms median on an M1 laptop)
+cd server && npm run seed && cd ..
+
+# Terminal 1: API
+cd server && npm run dev          # http://localhost:3000
+
+# Terminal 2: UI
+cd client && npm run dev          # http://localhost:5173
 ```
 
-## Run the API
+Open <http://localhost:5173>; the app redirects to `/employees`.
+
+## Scripts
+
+Run from the repo root unless noted otherwise.
+
+| Command | What it does |
+|---|---|
+| `npm install` | Install all workspaces (npm hoists shared deps). |
+| `npm test` | Run Vitest in every workspace. |
+| `npm run typecheck` | `tsc --noEmit` across all workspaces. |
+| `npm run build` | Build all workspaces. |
+
+### Server-only
+
+| Command | What it does |
+|---|---|
+| `npm run dev --workspace=@salary/server` | Boot Fastify with `tsx watch`. |
+| `npm run seed --workspace=@salary/server` | Seed 10K employees (`--count=N`, `--seed=N`, `--db=path`). |
+| `npm test --workspace=@salary/server` | 108 service / repository / route tests. |
+
+### Client-only
+
+| Command | What it does |
+|---|---|
+| `npm run dev --workspace=@salary/client` | Vite dev server on `:5173`. |
+| `npm run build --workspace=@salary/client` | Production build (133 kB gz main + 104 kB gz Insights chunk). |
+| `npm test --workspace=@salary/client` | 14 component tests under jsdom. |
+
+## Configuration
+
+The server reads three optional environment variables:
+
+| Variable | Default | Notes |
+|---|---|---|
+| `DATABASE_PATH` | `./data.db` | SQLite file path. Use `:memory:` for ephemeral runs. |
+| `PORT` | `3000` | Listen port. |
+| `HOST` | `0.0.0.0` | Bind address. |
+
+The client reads `VITE_API_URL` (default `http://localhost:3000`). CORS reflects any origin, so the dev server connects with no extra setup.
+
+## Tests
+
+Total: **183 tests** across the three workspaces.
 
 ```bash
-cd server
-npm run dev        # tsx watch + Fastify on http://localhost:3000
+npm test                                # all three
+npm test --workspace=@salary/shared     # 61 Zod schema tests
+npm test --workspace=@salary/server     # 108 service + repo + route tests
+npm test --workspace=@salary/client     # 14 component tests
 ```
 
-Environment variables (all optional):
-- `DATABASE_PATH` — SQLite file path (default `./data.db`)
-- `PORT` — listen port (default `3000`)
-- `HOST` — bind address (default `0.0.0.0`)
+The server tests run the same `runEmployeeRepositoryContract` suite against both `InMemoryEmployeeRepository` and `SqliteEmployeeRepository`; behavioural drift between the two implementations is a visible failure.
 
-CORS reflects any origin, so a frontend on `localhost:5173` (Vite default) can call the API directly.
+## API surface
 
-## Seed
+| Verb | Path | Notes |
+|---|---|---|
+| `GET` | `/employees` | Paginated list. Query: `page`, `pageSize`, `country`, `jobTitle`, `search`. |
+| `GET` | `/employees/:id` | Single employee. 404 for unknown or malformed id. |
+| `POST` | `/employees` | Create. Body validated with `CreateEmployeeSchema`. |
+| `PATCH` | `/employees/:id` | Partial update. Empty body rejected. |
+| `DELETE` | `/employees/:id` | 204 on success, 404 if missing. |
+| `GET` | `/employees/meta` | Distinct countries + job titles for filter dropdowns. |
+| `GET` | `/insights/overview` | Total counts + top 10 lists. |
+| `GET` | `/insights/by-country` | Per `(country, currency)` salary aggregates. |
+| `GET` | `/insights/by-title?country=XX` | Per-title aggregates within one country. |
 
-A seed script populates the database with 10,000 employees by combining names from `data/first_names.txt` and `data/last_names.txt`. See [`docs/performance.md`](docs/performance.md) for benchmark numbers (current run: ~52 ms for 10K rows).
-
-```bash
-cd server
-npm run seed                              # 10K rows, ./data.db, random
-npm run seed -- --count=5000 --seed=42    # reproducible, smaller
-npm run seed -- --db=../data.db           # write outside server/
-```
-
-The script truncates `employees` before inserting, so re-runs are idempotent.
+Errors come back as `{ error: 'ValidationError', issues: [{ path, message, code }] }` (Zod-shaped) or `{ error: 'NotFound', message }`.
 
 ## Documentation
 
-- [`docs/architecture.md`](docs/architecture.md) — system overview, layering, data flow
-- [`docs/decisions.md`](docs/decisions.md) — trade-offs and design choices
-- [`docs/performance.md`](docs/performance.md) — seed script benchmarks
-- [`docs/prompts.md`](docs/prompts.md) — AI prompts used during development
-- [`docs/progress.md`](docs/progress.md) — per-phase build log
+- [`docs/architecture.md`](docs/architecture.md) — layered design (routes → services → repositories), shared schema strategy
+- [`docs/decisions.md`](docs/decisions.md) — D1–D5: why SQLite, Drizzle, Fastify, Vite-only, npm workspaces
+- [`docs/performance.md`](docs/performance.md) — seed script: 10K rows in ~52 ms median; rejected alternatives
+- [`docs/prompts.md`](docs/prompts.md) — the AI prompts that shaped each phase, with reasoning
+- [`docs/progress.md`](docs/progress.md) — per-phase shipped / validated / deferred log
