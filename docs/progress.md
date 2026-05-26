@@ -348,3 +348,33 @@ A short, chronological log of what shipped in each phase, what was validated, wh
 **Commits**: 3 (overview cards + headcount charts, by-country table, by-title drill-down + lazy split).
 
 ---
+
+## Phase 11 — Polish + documentation
+
+**Goal**: Make the product look finished to someone who clones the repo cold: clear loading states, no white-screen failure mode, README that actually walks through install → seed → run, and an architecture doc that matches what shipped.
+
+**Shipped**:
+- `EmployeesTable` now shows "Loading employees…" on the very first paint (rows empty + isLoading true) instead of a silent blank.
+- `ErrorBoundary` at the app root catches render-time crashes and shows a friendly fallback with a Reload action.
+- `README.md` rewritten end-to-end: stack table, project layout, two-terminal quick-start, per-workspace script tables, env vars, test counts, full API surface, links to all four `docs/` artifacts.
+- `docs/architecture.md` refreshed to match what's actually in the code now — service+repository split, contract-based parity, client architecture, lazy-loaded Insights, seed-script trade-off.
+
+**Validation**:
+- All workspaces clean: `npm run typecheck` and `npm test` both pass.
+- Test counts: **shared 61, server 108, client 14 — 183 total.**
+- Production build for the client: 133 kB gz main + 104 kB gz Insights chunk (lazy).
+
+**Deferred**:
+- A11y audit beyond labelled inputs + ARIA roles on errors — sufficient for the persona; deeper audit deferred.
+- Toast notifications for mutation success — inline cues are clear enough for a single-user tool.
+- A11y / keyboard navigation tests — manual smoke test sufficed.
+
+**Files**:
+- `client/src/components/ErrorBoundary.tsx` (new)
+- `client/src/App.tsx`
+- `client/src/features/employees/EmployeesTable.{tsx,test.tsx}`
+- `README.md`, `docs/architecture.md`
+
+**Commits**: 3 (polish, README rewrite, architecture doc refresh).
+
+---

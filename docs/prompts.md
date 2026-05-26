@@ -127,6 +127,18 @@ The intent is not to log every keystroke, but to capture the *non-obvious* promp
 
 **Validation discipline**: typecheck + tests after each commit; ran `vite build` after splitting to confirm the chunk landed in its own file. Final suite at 122 green (108 server + 14 client).
 
+## Phase 11 — Polish + documentation
+
+**Prompt**: _Final pass. Cover the small UX gaps (loading state on first paint, root error boundary), then rewrite the README as a proper product doc — someone clones the repo and should be able to install, seed, and run the app in under two minutes. Refresh architecture.md to describe what actually shipped, including the contract pattern and the lazy-loaded Insights chunk. Verify all workspaces typecheck and test clean before pushing._
+
+**Why**:
+- The most underrated polish on a first-paint flow is "Loading…" — a blank table looks broken even though the network is fine.
+- The root ErrorBoundary is the cheapest way to upgrade a worst-case failure mode (white screen, no useful info) into a useful failure mode (visible error message, Reload button).
+- READMEs that assume the reader has context are the most common failure mode of demo projects. The new README walks through install → seed → two-terminal dev with copy-pasteable commands, then documents every script, env var, API endpoint, and doc file.
+- `architecture.md` was written in Phase 1 as a forward-looking outline; this update aligns it with the code so a reviewer reading it isn't looking at stale claims.
+
+**Validation discipline**: 183 tests across three workspaces all green; production client build still produces the 133 kB main + 104 kB Insights chunks; typecheck clean.
+
 ---
 
 > Subsequent phases will append here as we build.
