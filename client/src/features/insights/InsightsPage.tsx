@@ -1,10 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { OverviewCards } from './OverviewCards';
 import { HeadcountBarChart } from './HeadcountBarChart';
-import { useOverviewQuery } from './hooks';
+import { ByCountryTable } from './ByCountryTable';
+import { useInsightsByCountryQuery, useOverviewQuery } from './hooks';
 
 export const InsightsPage = () => {
   const overview = useOverviewQuery();
+  const byCountry = useInsightsByCountryQuery();
 
   return (
     <section className="space-y-6">
@@ -50,6 +52,21 @@ export const InsightsPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Salary by country</CardTitle>
+        </CardHeader>
+        <CardContent className="px-0">
+          {byCountry.isError ? (
+            <div className="mx-4 mb-4 rounded-md border border-[var(--color-danger)] bg-red-50 px-3 py-2 text-sm text-[var(--color-danger)]">
+              {byCountry.error.message}
+            </div>
+          ) : (
+            <ByCountryTable rows={byCountry.data ?? []} isLoading={byCountry.isLoading} />
+          )}
+        </CardContent>
+      </Card>
     </section>
   );
 };
