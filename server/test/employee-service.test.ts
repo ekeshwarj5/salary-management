@@ -318,3 +318,30 @@ describe('EmployeeService.list filtering', () => {
     expect(result.total).toBe(0);
   });
 });
+
+describe('EmployeeService.getFilterMeta', () => {
+  let service: EmployeeService;
+
+  beforeEach(() => {
+    service = new EmployeeService(new InMemoryEmployeeRepository(), sequentialIds());
+  });
+
+  const make = (overrides: Partial<CreateEmployee>) =>
+    service.create({ ...validInput, ...overrides });
+
+  it('returns empty arrays for an empty repository', async () => {
+    expect(await service.getFilterMeta()).toEqual({ countries: [], jobTitles: [] });
+  });
+
+  it('returns sorted distinct countries and job titles', async () => {
+    await make({ country: 'US', jobTitle: 'Engineer' });
+    await make({ country: 'IN', jobTitle: 'Designer' });
+    await make({ country: 'US', jobTitle: 'Engineer' }); // duplicates
+    await make({ country: 'DE', jobTitle: 'Manager' });
+
+    expect(await service.getFilterMeta()).toEqual({
+      countries: ['DE', 'IN', 'US'],
+      jobTitles: ['Designer', 'Engineer', 'Manager'],
+    });
+  });
+});

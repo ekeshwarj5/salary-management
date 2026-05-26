@@ -38,6 +38,8 @@ export const employeeRoutes = (service: EmployeeService) => async (app: FastifyI
     return service.list(parsed.data);
   });
 
+  app.get('/employees/meta', async () => service.getFilterMeta());
+
   app.post('/employees', async (request, reply) => {
     const parsed = CreateEmployeeSchema.safeParse(request.body);
     if (!parsed.success) {

@@ -388,3 +388,41 @@ describe('GET /employees', () => {
     expect(response.statusCode).toBe(400);
   });
 });
+
+describe('GET /employees/meta', () => {
+  let app: FastifyInstance;
+
+  const seed = async (overrides: Partial<CreateEmployee>) =>
+    (
+      await app.inject({
+        method: 'POST',
+        url: '/employees',
+        payload: { ...validPayload, ...overrides },
+      })
+    ).json();
+
+  beforeEach(async () => {
+    const repo = new InMemoryEmployeeRepository();
+    const employees = new EmployeeService(repo, sequentialIds());
+    const insights = new InsightsService(repo);
+    app = buildApp({ employees, insights });
+    await app.ready();
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('returns sorted distinct countries and job titles', async () => {
+    await seed({ country: 'US', jobTitle: 'Engineer', email: 'a@x.com' });
+    await seed({ country: 'IN', jobTitle: 'Designer', email: 'b@x.com' });
+
+    const response = await app.inject({ method: 'GET', url: '/employees/meta' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      countries: ['IN', 'US'],
+      jobTitles: ['Designer', 'Engineer'],
+    });
+  });
+});
