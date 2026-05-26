@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { OverviewCards } from './OverviewCards';
 import { HeadcountBarChart } from './HeadcountBarChart';
 import { ByCountryTable } from './ByCountryTable';
+import { ByTitleDrilldown } from './ByTitleDrilldown';
 import { useInsightsByCountryQuery, useOverviewQuery } from './hooks';
 
 export const InsightsPage = () => {
@@ -65,6 +66,15 @@ export const InsightsPage = () => {
           ) : (
             <ByCountryTable rows={byCountry.data ?? []} isLoading={byCountry.isLoading} />
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Salary by job title (within a country)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ByTitleDrilldown byCountry={byCountry.data ?? []} />
         </CardContent>
       </Card>
     </section>
