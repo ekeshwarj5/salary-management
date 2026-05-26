@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import type { Employee } from '@salary/shared';
 import { EmployeesTable } from './EmployeesTable';
 import { EmployeesFilters, type FilterValues } from './EmployeesFilters';
 import { EmployeeFormDialog } from './EmployeeFormDialog';
+import { EmployeeDeleteDialog } from './EmployeeDeleteDialog';
 import { Pagination } from '../../components/ui/Pagination';
 import { Button } from '../../components/ui/Button';
 import { useEmployeeFilterMetaQuery, useEmployeesQuery } from './hooks';
@@ -13,6 +15,8 @@ const EMPTY_META = { countries: [], jobTitles: [] };
 export const EmployeesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isAddOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<Employee | null>(null);
+  const [deleting, setDeleting] = useState<Employee | null>(null);
 
   const filters: FilterValues = {
     search: searchParams.get('search') ?? '',
@@ -71,7 +75,17 @@ export const EmployeesPage = () => {
         <Button onClick={() => setAddOpen(true)}>+ Add employee</Button>
       </header>
 
-      <EmployeeFormDialog open={isAddOpen} onClose={() => setAddOpen(false)} />
+      <EmployeeFormDialog
+        open={isAddOpen}
+        onClose={() => setAddOpen(false)}
+        initialValue={null}
+      />
+      <EmployeeFormDialog
+        open={editing !== null}
+        onClose={() => setEditing(null)}
+        initialValue={editing}
+      />
+      <EmployeeDeleteDialog employee={deleting} onClose={() => setDeleting(null)} />
 
       <EmployeesFilters
         values={filters}
@@ -87,7 +101,12 @@ export const EmployeesPage = () => {
         </div>
       )}
 
-      <EmployeesTable rows={list.data?.items ?? []} isLoading={list.isLoading} />
+      <EmployeesTable
+        rows={list.data?.items ?? []}
+        isLoading={list.isLoading}
+        onEdit={setEditing}
+        onDelete={setDeleting}
+      />
 
       <Pagination
         page={page}

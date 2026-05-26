@@ -1,12 +1,15 @@
 import type { Employee } from '@salary/shared';
 import { formatCurrency, formatDate } from '../../lib/format';
+import { Button } from '../../components/ui/Button';
 
 export interface EmployeesTableProps {
   rows: Employee[];
   isLoading: boolean;
+  onEdit?: (employee: Employee) => void;
+  onDelete?: (employee: Employee) => void;
 }
 
-export const EmployeesTable = ({ rows, isLoading }: EmployeesTableProps) => {
+export const EmployeesTable = ({ rows, isLoading, onEdit, onDelete }: EmployeesTableProps) => {
   if (rows.length === 0 && !isLoading) {
     return (
       <div className="rounded-lg border border-dashed border-[var(--color-border)] bg-white py-12 text-center text-sm text-[var(--color-muted)]">
@@ -27,6 +30,7 @@ export const EmployeesTable = ({ rows, isLoading }: EmployeesTableProps) => {
             <th className="px-4 py-2 text-right font-medium">Salary</th>
             <th className="px-4 py-2 font-medium">Joined</th>
             <th className="px-4 py-2 font-medium">Email</th>
+            {(onEdit || onDelete) && <th className="px-4 py-2 text-right font-medium">Actions</th>}
           </tr>
         </thead>
         <tbody>
@@ -43,6 +47,22 @@ export const EmployeesTable = ({ rows, isLoading }: EmployeesTableProps) => {
                 {formatDate(employee.joinedAt)}
               </td>
               <td className="px-4 py-2 text-[var(--color-muted)]">{employee.email}</td>
+              {(onEdit || onDelete) && (
+                <td className="px-4 py-2">
+                  <div className="flex justify-end gap-1">
+                    {onEdit && (
+                      <Button size="sm" variant="ghost" onClick={() => onEdit(employee)}>
+                        Edit
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button size="sm" variant="ghost" onClick={() => onDelete(employee)}>
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

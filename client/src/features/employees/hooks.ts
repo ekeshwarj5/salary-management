@@ -1,8 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { UpdateEmployee } from '@salary/shared';
 import {
   createEmployee,
+  deleteEmployee,
   getEmployeeFilterMeta,
   listEmployees,
+  updateEmployee,
   type ListEmployeesParams,
 } from '../../lib/api';
 
@@ -44,6 +47,27 @@ export const useCreateEmployeeMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createEmployee,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+    },
+  });
+};
+
+export const useUpdateEmployeeMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: UpdateEmployee }) =>
+      updateEmployee(id, patch),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+    },
+  });
+};
+
+export const useDeleteEmployeeMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteEmployee,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
     },

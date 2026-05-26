@@ -1,17 +1,24 @@
 import { useEffect } from 'react';
 import { useForm, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CreateEmployeeSchema, type CreateEmployee } from '@salary/shared';
+import {
+  CreateEmployeeSchema,
+  type CreateEmployee,
+  type Employee,
+  type UpdateEmployee,
+} from '@salary/shared';
 import { Dialog } from '../../components/ui/Dialog';
 import { Field } from '../../components/ui/Field';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { ApiError } from '../../lib/api';
-import { useCreateEmployeeMutation } from './hooks';
+import { useCreateEmployeeMutation, useUpdateEmployeeMutation } from './hooks';
 
 export interface EmployeeFormDialogProps {
   open: boolean;
   onClose: () => void;
+  /** When provided, dialog is in edit mode and pre-fills from this record. */
+  initialValue?: Employee | null;
 }
 
 const blankPayload: CreateEmployee = {
@@ -25,8 +32,31 @@ const blankPayload: CreateEmployee = {
   joinedAt: '',
 };
 
-export const EmployeeFormDialog = ({ open, onClose }: EmployeeFormDialogProps) => {
+const toFormDefaults = (employee: Employee | null | undefined): CreateEmployee => {
+  if (!employee) return blankPayload;
+  // Strip id - the form only edits mutable fields.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id, ...rest } = employee;
+  return rest;
+};
+
+/** Return only the fields that changed between original and current. */
+const diffPatch = (original: Employee, current: CreateEmployee): UpdateEmployee => {
+  const patch: Partial<CreateEmployee> = {};
+  for (const key of Object.keys(current) as Array<keyof CreateEmployee>) {
+    if (current[key] !== original[key]) {
+      (patch as Record<string, unknown>)[key] = current[key];
+    }
+  }
+  return patch as UpdateEmployee;
+};
+
+export const EmployeeFormDialog = ({ open, onClose, initialValue }: EmployeeFormDialogProps) => {
+  const isEdit = Boolean(initialValue);
   const create = useCreateEmployeeMutation();
+  const update = useUpdateEmployeeMutation();
+  const mutation = isEdit ? update : create;
+
   const {
     register,
     handleSubmit,
@@ -38,21 +68,30 @@ export const EmployeeFormDialog = ({ open, onClose }: EmployeeFormDialogProps) =
     defaultValues: blankPayload,
   });
 
-  // Reset the form whenever the dialog reopens so partial input from
-  // a previous attempt doesn't carry over. `reset` and `create.reset`
-  // are stable identities; depending on the `create` object would
-  // re-fire this effect on every mutation state change.
+  // Reset whenever the dialog reopens or the target employee changes;
+  // depending on the mutation object would re-fire this on every state
+  // change because the object identity is new each render.
   useEffect(() => {
     if (open) {
-      reset(blankPayload);
+      reset(toFormDefaults(initialValue));
       create.reset();
+      update.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, initialValue?.id]);
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await create.mutateAsync(values);
+      if (initialValue) {
+        const patch = diffPatch(initialValue, values);
+        if (Object.keys(patch).length === 0) {
+          onClose();
+          return;
+        }
+        await update.mutateAsync({ id: initialValue.id, patch });
+      } else {
+        await create.mutateAsync(values);
+      }
       onClose();
     } catch (err) {
       if (err instanceof ApiError && err.body.issues) {
@@ -68,8 +107,12 @@ export const EmployeeFormDialog = ({ open, onClose }: EmployeeFormDialogProps) =
     <Dialog
       open={open}
       onClose={onClose}
-      title="Add employee"
-      description="All fields are required. Country and currency use ISO codes."
+      title={isEdit ? 'Edit employee' : 'Add employee'}
+      description={
+        isEdit
+          ? 'Update the fields that need to change. Unchanged fields are not sent.'
+          : 'All fields are required. Country and currency use ISO codes.'
+      }
     >
       <form onSubmit={onSubmit} className="space-y-3">
         <Field label="Full name" htmlFor="fullName" error={errors.fullName?.message}>
@@ -123,18 +166,19 @@ export const EmployeeFormDialog = ({ open, onClose }: EmployeeFormDialogProps) =
           <Input id="email" type="email" {...register('email')} />
         </Field>
 
-        {create.isError && !(create.error instanceof ApiError && create.error.body.issues) && (
-          <div className="rounded-md border border-[var(--color-danger)] bg-red-50 px-3 py-2 text-xs text-[var(--color-danger)]">
-            {create.error.message}
-          </div>
-        )}
+        {mutation.isError &&
+          !(mutation.error instanceof ApiError && mutation.error.body.issues) && (
+            <div className="rounded-md border border-[var(--color-danger)] bg-red-50 px-3 py-2 text-xs text-[var(--color-danger)]">
+              {mutation.error.message}
+            </div>
+          )}
 
         <div className="mt-2 flex justify-end gap-2 border-t border-[var(--color-border)] pt-3">
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving…' : 'Add employee'}
+            {isSubmitting ? 'Saving…' : isEdit ? 'Save changes' : 'Add employee'}
           </Button>
         </div>
       </form>
