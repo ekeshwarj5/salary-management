@@ -10,10 +10,10 @@ export interface EmployeesTableProps {
 }
 
 export const EmployeesTable = ({ rows, isLoading, onEdit, onDelete }: EmployeesTableProps) => {
-  if (rows.length === 0 && !isLoading) {
+  if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-[var(--color-border)] bg-white py-12 text-center text-sm text-[var(--color-muted)]">
-        No employees match the current filters.
+        {isLoading ? 'Loading employees…' : 'No employees match the current filters.'}
       </div>
     );
   }

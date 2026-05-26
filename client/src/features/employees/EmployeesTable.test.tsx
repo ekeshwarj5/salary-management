@@ -39,9 +39,10 @@ describe('EmployeesTable', () => {
     expect(screen.getByText(/no employees match/i)).toBeInTheDocument();
   });
 
-  it('does not show the empty-state while loading (avoids flicker on first load)', () => {
+  it('shows a loading message instead of the empty-state on first load', () => {
     render(<EmployeesTable rows={[]} isLoading={true} />);
 
     expect(screen.queryByText(/no employees match/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/loading employees/i)).toBeInTheDocument();
   });
 });
