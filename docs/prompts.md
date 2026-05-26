@@ -100,6 +100,21 @@ The intent is not to log every keystroke, but to capture the *non-obvious* promp
 
 **Validation discipline**: `npm run typecheck` and `npm run build` after each commit; commit only when both are clean. Final bundle: 98 kB gzipped JS, 3 kB gzipped CSS.
 
+## Phase 9 — Employee CRUD UI
+
+**Prompt**: _Build the full CRUD UI on top of the existing API. Paginated table with URL-driven page + filters (search, country, jobTitle). Add a small `/employees/meta` endpoint for the filter dropdowns rather than hardcoding the lists in the frontend — derive from data, single source of truth. Form dialog reuses `CreateEmployeeSchema` via `@hookform/resolvers/zod`, so validation rules live in shared and apply on both sides of the wire. Server-side ValidationError issues route to specific fields via `setError`. Native `<dialog>` element instead of a custom modal — browser handles focus trap and Esc. Edit mode reuses the same dialog with an `initialValue` prop and only PATCHes the changed fields. Delete is a small confirmation dialog. Mutations invalidate `['employees']` on success._
+
+**Why**:
+- URL-driven filter state is the right call for a tool an HR Manager might bookmark or share. `replace:true` on `setSearchParams` keeps keystroke history out of the back stack.
+- A small dedicated `/employees/meta` endpoint beats hardcoding the country / title lists in the frontend (they'd drift) and beats deriving from the current page (only ever shows ~20 values).
+- The form dialog re-using `CreateEmployeeSchema` is the payoff for keeping schemas in `shared/` — validation rules live in one place and the same regex stops bad input on both the form and the API.
+- Diff-then-PATCH on edit avoids the gotcha where an unchanged field re-validates against current schema rules — e.g. salary starts at the form default `0` if not touched, which would fail `positive()`. Sending only the actual edits sidesteps this entirely.
+- Native `<dialog>` over a hand-rolled modal: browser gets focus trap, backdrop, Esc, and inert background for free. Cost: a tiny showModal/close stub in tests for jsdom.
+
+**Trade-off worth recording**: `exactOptionalPropertyTypes` is now off for `client/` only. React form libraries return `errors.fieldName?.message` as `string | undefined`, and propagating that into a `<Field error={...}>` requires `error?: string | undefined` (not `error?: string`) at every site. The strict-optional flag was load-bearing in `shared/server` (it caught real bugs in Zod inference vs domain types); in the UI it produced friction without signal.
+
+**Validation discipline**: typecheck after each commit; ran client + server suites after every cycle. Killed a stuck `vitest` once when an effect dep included a non-stable mutation object — the loop was visible immediately in `ps`; fix was to depend on `open` only (mutation methods are stable refs per TanStack docs). Final suite at 120 green across all workspaces (108 server + 12 client).
+
 ---
 
 > Subsequent phases will append here as we build.

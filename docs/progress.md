@@ -272,3 +272,46 @@ A short, chronological log of what shipped in each phase, what was validated, wh
 **Commits**: 4 (Vite scaffold, Tailwind + primitives, shared-insights refactor, API client + Query + Router + layout).
 
 ---
+
+## Phase 9 — Employee CRUD UI
+
+**Goal**: Deliver the full add/view/update/delete flow over the existing API, with URL-driven filters, paginated table, and form validation that reuses the shared Zod schema.
+
+**Shipped**:
+- **Paginated table** — `EmployeesTable` renders the 8 employee fields per row, salary right-aligned with tabular numbers. Empty-state copy appears only when not loading (no first-paint flicker).
+- **`useEmployeesQuery`** with `placeholderData` so the previous page stays visible during the next fetch — no white flash.
+- **URL-driven state** via `useSearchParams`: `page`, `search`, `country`, `jobTitle`. `setSearchParams` uses `replace:true` so keystrokes don't pollute the back stack. Any filter change resets `page` to 1.
+- **`EmployeesFilters`** — search input + country select + job title select + a Clear button that disables when no filter is active.
+- **`GET /employees/meta`** (server) returns sorted distinct `countries` and `jobTitles`. The frontend's filter dropdowns query this with a 5-minute staleTime; the set changes only when employees are added with novel values.
+- **`EmployeeFormDialog`** — one component for both add and edit. Uses `react-hook-form` + `zodResolver(CreateEmployeeSchema)`, so validation rules live in `shared/` and apply on both sides of the wire. Server-side `ValidationError` issues come back through `ApiError.body.issues` and route to the matching field via `setError`.
+- **`diffPatch` on edit** — sends only changed fields. A no-op edit closes the dialog without an API call; unchanged `salary` doesn't trip the schema's `positive()` constraint.
+- **`EmployeeDeleteDialog`** — small confirmation prompt that names the employee. Cancel + Delete buttons; Delete becomes a spinner while the mutation is in flight.
+- **Mutations invalidate `['employees']`** on success, so the table and filter dropdowns refresh after every change without manual intervention.
+- **Native `<dialog>` element** — the browser handles focus trap, Esc-to-close, and the inert backdrop; the `Dialog` component just syncs open/close to the DOM.
+- **`Field` primitive** — labelled wrapper with `hint`/`error` slots; `htmlFor` + `id` wire up screen-reader semantics and click-on-label focusing.
+
+**Validation**:
+- 12 client tests green (table empty-state + rendering, filter render/onChange/clear behaviour, form structure + Cancel, delete prompt + Cancel).
+- 108 server tests green (added 3 for `getFilterMeta`).
+- `npm run typecheck` clean across all three workspaces.
+
+**Deferred**:
+- Toast notifications — error states are rendered inline next to the relevant control or as a banner above the table; a dedicated toast layer is polish that adds another primitive without changing what the user can do.
+- Optimistic updates on mutations — for a single-user HR tool the network round-trip is cheap; the simpler invalidate-on-success path keeps the cache trivially correct.
+- A validation-on-submit test for the form dialog — the schema-level tests already prove `'usa'` is rejected as a country, and exercising the same path through the dialog in jsdom (with `<dialog>` polyfilled) added flake without much signal. The structural test (every field rendered) plus the Cancel test cover the dialog's responsibilities.
+
+**Trade-off recorded**:
+- `exactOptionalPropertyTypes` is **off for the client workspace only**. React-form libraries pervasively produce `string | undefined` for field state, and the strict flag forced a cast at every `<Field error={errors.x?.message}>` site without catching real bugs. Still on for `shared` and `server`, where it earned its keep.
+
+**Files**:
+- `client/src/lib/format.ts`
+- `client/src/components/ui/{Pagination, Dialog, Field}.tsx`
+- `client/src/features/employees/{hooks, EmployeesTable, EmployeesFilters, EmployeesPage, EmployeeFormDialog, EmployeeDeleteDialog}.{tsx,ts}`
+- `client/src/features/employees/*.test.tsx` (4 test files)
+- `server/src/services/employee-service.ts` (+ `getFilterMeta`)
+- `server/src/routes/employees.ts` (+ `GET /employees/meta`)
+- `client/tsconfig.json` (relaxed `exactOptionalPropertyTypes`)
+
+**Commits**: 5 (table+pagination, meta endpoint, filters, add dialog, edit + delete).
+
+---
