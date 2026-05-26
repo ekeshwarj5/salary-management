@@ -106,3 +106,5 @@ export const getInsightsByCountry = () =>
 
 export const getInsightsByTitleInCountry = (country: string) =>
   request<TitleSalaryInsight[]>(`/insights/by-title${buildQuery({ country })}`);
+
+export type { OverviewInsight, CountrySalaryInsight, TitleSalaryInsight };
