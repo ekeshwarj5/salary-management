@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  createEmployee,
   getEmployeeFilterMeta,
   listEmployees,
   type ListEmployeesParams,
@@ -33,3 +34,18 @@ export const useEmployeeFilterMetaQuery = () =>
     queryFn: getEmployeeFilterMeta,
     staleTime: 5 * 60_000,
   });
+
+/**
+ * Create-employee mutation. On success, invalidates both the list and
+ * the meta caches so a freshly-added country / title appears in the
+ * filter dropdowns without a manual refresh.
+ */
+export const useCreateEmployeeMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createEmployee,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+    },
+  });
+};

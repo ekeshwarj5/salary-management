@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { EmployeesTable } from './EmployeesTable';
 import { EmployeesFilters, type FilterValues } from './EmployeesFilters';
+import { EmployeeFormDialog } from './EmployeeFormDialog';
 import { Pagination } from '../../components/ui/Pagination';
+import { Button } from '../../components/ui/Button';
 import { useEmployeeFilterMetaQuery, useEmployeesQuery } from './hooks';
 
 const PAGE_SIZE = 20;
@@ -9,6 +12,7 @@ const EMPTY_META = { countries: [], jobTitles: [] };
 
 export const EmployeesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isAddOpen, setAddOpen] = useState(false);
 
   const filters: FilterValues = {
     search: searchParams.get('search') ?? '',
@@ -64,7 +68,10 @@ export const EmployeesPage = () => {
             Browse, filter, and manage your organisation's headcount.
           </p>
         </div>
+        <Button onClick={() => setAddOpen(true)}>+ Add employee</Button>
       </header>
+
+      <EmployeeFormDialog open={isAddOpen} onClose={() => setAddOpen(false)} />
 
       <EmployeesFilters
         values={filters}

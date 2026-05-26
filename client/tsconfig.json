@@ -7,7 +7,12 @@
     "types": ["vitest/globals", "@testing-library/jest-dom"],
     "paths": {
       "@salary/shared": ["../shared/src/index.ts"]
-    }
+    },
+    // Off for the client only. React form libraries pervasively produce
+    // `string | undefined` for field state, and the strict-optional flag
+    // forces a cast at every <Field error={errors.x?.message}> site
+    // without catching real bugs. Stays on for shared/server.
+    "exactOptionalPropertyTypes": false
   },
   // vite.config.ts is deliberately excluded from typechecking. Two
   // copies of vite end up in the workspace (vitest vendors its own),
