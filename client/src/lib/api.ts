@@ -79,6 +79,13 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
 export const listEmployees = (params: ListEmployeesParams = {}) =>
   request<ListEmployeesResponse>(`/employees${buildQuery(params)}`);
 
+export interface EmployeeFilterMeta {
+  countries: string[];
+  jobTitles: string[];
+}
+
+export const getEmployeeFilterMeta = () => request<EmployeeFilterMeta>('/employees/meta');
+
 export const getEmployee = (id: string) => request<Employee>(`/employees/${id}`);
 
 export const createEmployee = (input: CreateEmployee) =>
