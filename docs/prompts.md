@@ -115,6 +115,18 @@ The intent is not to log every keystroke, but to capture the *non-obvious* promp
 
 **Validation discipline**: typecheck after each commit; ran client + server suites after every cycle. Killed a stuck `vitest` once when an effect dep included a non-stable mutation object — the loop was visible immediately in `ps`; fix was to depend on `open` only (mutation methods are stable refs per TanStack docs). Final suite at 120 green across all workspaces (108 server + 12 client).
 
+## Phase 10 — Insights UI
+
+**Prompt**: _Build the insights dashboard. Three KPI cards from the overview endpoint, two bar charts (top countries + top titles by headcount) via Recharts, a salary-by-country table (one row per country+currency, min/median/avg/max formatted in each row's own currency), and a country-pick drill-down to per-title aggregates. Emphasise median in both tables — salary is right-skewed and the mean alone misleads. Lazy-load the Insights page with React.lazy so Recharts isn't paid for on the Employees landing._
+
+**Why**:
+- Recharts is the right pick for declarative bar charts in React, but it's heavy (~140 kB gz). Lazy-splitting the Insights page kept the Employees-page bundle at 133 kB gz instead of 237 kB — and Insights-page first-visit cost is the same Recharts download either way.
+- The drill-down's country selector sources from `useInsightsByCountryQuery`'s already-cached data — no separate "list of countries" round-trip, the data we already have for the table doubles as the option set.
+- Per-currency rows are kept explicit in both tables (no FX conversion). The footnote about median calls out the analytical choice to a reader who might otherwise assume "average is the obvious metric."
+- A per-title bar chart inside the drill-down was rejected — to stay honest about currency it would need to be one chart per currency, which is busy for the marginal signal vs the existing table.
+
+**Validation discipline**: typecheck + tests after each commit; ran `vite build` after splitting to confirm the chunk landed in its own file. Final suite at 122 green (108 server + 14 client).
+
 ---
 
 > Subsequent phases will append here as we build.

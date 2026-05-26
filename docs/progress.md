@@ -315,3 +315,36 @@ A short, chronological log of what shipped in each phase, what was validated, wh
 **Commits**: 5 (table+pagination, meta endpoint, filters, add dialog, edit + delete).
 
 ---
+
+## Phase 10 — Insights UI with charts
+
+**Goal**: Render the insights endpoints as a dashboard: top-line counts, headcount visualisations, per-country salary aggregates, and a drill-down to per-title aggregates within a chosen country.
+
+**Shipped**:
+- `useOverviewQuery`, `useInsightsByCountryQuery`, `useInsightsByTitleInCountryQuery` — TanStack Query hooks with 60 s `staleTime` (insights don't move fast). The by-title hook is gated on `enabled: country !== ''`.
+- `OverviewCards` — three KPI cards (total employees, distinct countries, distinct titles). Animated skeleton placeholder while loading avoids a 0-then-N flash.
+- `HeadcountBarChart` — Recharts `<BarChart>` wrapper used for both top-countries and top-titles visualisations. Auto-rotates x-axis labels beyond 6 categories so long titles don't collide.
+- `ByCountryTable` — one row per `(country, currency)` with count + min/median/avg/max formatted in the row's own currency. Median is visually emphasised because salary distributions are right-skewed; an inline footnote explains the choice for the reader.
+- `ByTitleDrilldown` — `<Select>` populated from the already-cached by-country data (no extra fetch for the option list) plus a per-title table for the chosen country. Empty / loading / error states are distinct branches with appropriate copy.
+- **Code-split** — `InsightsPage` is `React.lazy()`-loaded with a `Suspense` fallback. Recharts (~140 kB gzipped) doesn't ship with the default Employees page.
+
+**Validation**:
+- 14 client tests still green (the table-empty/loading + filters + dialog + delete tests from Phase 9, plus 2 new ones for `OverviewCards`).
+- `npm run build` (client) produces:
+  - **133 kB gzipped main chunk** (Employees + Router + Query + Tailwind)
+  - **104 kB gzipped Insights chunk** (Recharts + insights features), loaded on demand
+- `npm run typecheck` clean across all workspaces.
+
+**Deferred**:
+- A per-title bar chart inside the drill-down — table conveys the four aggregate columns clearly without losing currency context; a chart would have to be one-per-currency to stay honest, which is busy for the marginal signal gained.
+- Recharts theming polish (custom colours per series, axis units) — the default theme reads well in the screenshot pass; deeper styling is a sink for time better spent on tests + docs.
+
+**Files**:
+- `client/src/features/insights/{hooks, OverviewCards, HeadcountBarChart, ByCountryTable, ByTitleDrilldown, InsightsPage}.{tsx,ts}`
+- `client/src/features/insights/OverviewCards.test.tsx`
+- `client/src/App.tsx` (lazy + Suspense)
+- `client/src/lib/api.ts` (re-export of shared insight types)
+
+**Commits**: 3 (overview cards + headcount charts, by-country table, by-title drill-down + lazy split).
+
+---
